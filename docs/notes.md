@@ -17,6 +17,7 @@ Decisions reached during the session:
 - **Sprite-driven face is the architectural direction.** The original UART command set (`caring`/`surprised`/`pride` → SD folder switch) is dead. Future protocol will drive procedural face rendering with parameters, eventually steered by a small LM.
 - **Stay on Arduino_GFX for now**, switch to TFT_eSPI in the next chat. Reasoning: Grobot, RandomNerd, every CYD tutorial, and most face-rendering prior art uses TFT_eSPI; switching aligns us with the ecosystem before we build anything real on top.
 - **PSRAM mod is a "nice to have"**, not a blocker. Stock CYD has no PSRAM (confirmed by runtime check — see Diagnostics below).
+- **Module swap (ESP32 → ESP32-S3) considered and rejected.** S3 modules share rough footprint with WROOM-32 but differ in GPIO assignments, strapping pins, USB pin positions, and U4 PSRAM routing. A swap amounts to a partial board redesign, not a drop-in mod. For future S3 capability, source CYD variants that ship with S3 already on board (Sunton makes these). Existing 5 CYDs stay on classic ESP32 + U4 PSRAM mod.
 - **Flicker on the placeholder dot is acceptable.** Burning canvas-buffering work into Arduino_GFX is throwaway code given the upcoming library swap.
 
 ## File state at end of session
@@ -81,9 +82,34 @@ Track 3 begins after Track 1.5: `UIManager` with mode enum, `Rect::contains()` h
 
 ## Hardware to procure
 
-- **APS6404L-3SQR-SN** (8 Mbit / 8 MB QSPI PSRAM, SOP-8, 3.3V) — fits unpopulated U4 footprint per hexeguitar's [CYD mod doc](https://github.com/hexeguitar/ESP32_TFT_PIO). Sources: TinyTronics (NL), Rutronik24 (DE), Mouser (878-APS6404L-3SQR-SN), or Adafruit's rebranded equivalent (Digi-Key 1528-4677-ND). Avoid the USON-8 variant — different package.
-- **Caveat:** PSRAM uses GPIO16 and GPIO17 — the green and blue RGB LED channels. Mod sacrifices those LED colours unless the red channel gets rewired to GPIO4. User has accepted "red-only or no LED" as acceptable.
+For the 5-unit RSC prototype run, BoM for the U4 PSRAM mod per hexeguitar's [CYD mod doc](https://github.com/hexeguitar/ESP32_TFT_PIO):
+
+| Qty | Part | Digi-Key P/N | Notes |
+|-----|------|--------------|-------|
+| 5 | Adafruit 4677 PSRAM (rebranded ESP-PSRAM64H) | `1528-4677-ND` | 8 Mbit chip, ESP32 maps 4 MB usable. SOP-8, hand-solderable. |
+| 5 | 1206 red LED, ~620 nm, Vf ~2V | search MFR P/N `LTST-C150KRKT` (Lite-On) or equivalent | Replaces red channel of removed RGB LED, drives off GPIO4 via existing R17. |
+
+Total approx. €10–12 + VAT for both items × 5. Bundles into the existing Digi-Key cart cleanly.
+
+### Why this part choice
+
+- **Adafruit 4677 over the AP Memory branded `APS6404L-3SQR-SN`:** identical silicon, identical pinout (verified across both datasheets), MIT-rebranded by Adafruit. Digi-Key stocks the Adafruit version; AP Memory direct goes through Mouser. Single-supplier sourcing wins.
+- **4 MB usable over 2 MB (`APS1604M-3SQR-SN`):** the 2 MB part isn't stocked at Digi-Key in any recognisable form. The 4 MB part is the same price and the same effort, so capacity is essentially free. ESP32's classic memory controller caps PSRAM mapping at 4 MB regardless of chip size, so the 8 Mbit chip's "wasted" 4 MB is moot.
+- **`-3SQR-SN` suffix is mandatory.** The `-1SQR` variant is 1.8V and won't work in the CYD. The USON-8 (`-ZR` suffix) is a different package.
+
+### Mod sequence (per hexeguitar)
+
+1. Cut CS trace and SCK trace at marked points on the back of the board.
+2. Solder PSRAM chip onto U4 footprint.
+3. Remove existing RGB LED (sacrifices green and blue channels — RSC doesn't need them).
+4. Solder 1206 red LED across middle pads of the removed RGB LED footprint (now driven by GPIO4 via existing R17).
+5. Add fine enamel wire (magnet wire, ~30 AWG) jumpers from PSRAM CS and SCK pads to the freed-up RGB LED pads as shown in the mod photo. Existing R16/R20 (1kΩ) become the pull-ups for SCK/CS — no new resistors needed.
+
+### Caveats
+
+- PSRAM uses GPIO16 and GPIO17 — the green and blue RGB LED channels. Mod sacrifices those LED colours. RSC accepts red-only LED.
 - Hand-solderable with iron + flux (1.27 mm pitch gull-wing leads, no hot-air required).
+- Magnet wire isn't a Digi-Key item — usually scavenged from transformer salvage, or order separately as "magnet wire 30 AWG" from any electronics supplier.
 
 ## Reference material worth keeping
 
