@@ -7,6 +7,7 @@ void switchFolder(const String& newFolder);
 void loadMjpegFilesList();
 void playSelectedMjpeg(int mjpegIndex);
 void updateAnimationPlayer();
-void used_to_be_setup();
+void animation_setup();
+void requestFolderSwitch(const String& newFolder);
 
 #endif

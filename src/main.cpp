@@ -34,23 +34,28 @@ void handleCommand(String cmd)
     Serial.print("Received: ");
     Serial.println(cmd);
 
-    if (cmd == "caring")
+    if (cmd == "1")
     {
-        switchFolder("/caring");
-        setLedColor(true, false, false);
+        requestFolderSwitch("/caring");
+        setLedColor(true, false, true);
         Serial.println("Switched to /caring");
     }
-    else if (cmd == "surprised")
+    else if (cmd == "2")
     {
-        switchFolder("/surprised");
+        requestFolderSwitch("/surprised");
         setLedColor(false, false, true);
         Serial.println("Switched to /surprised");
     }
-    else if (cmd == "pride")
+    else if (cmd == "3")
     {
-        switchFolder("/pride");
+        requestFolderSwitch("/pride");
         setLedColor(false, true, false);
         Serial.println("Switched to /pride");
+    }
+    else if (cmd == "4"){
+        requestFolderSwitch("/angry");
+        setLedColor(true, false, false);
+        Serial.println("Switched to /angry");
     }
     else
     {
@@ -68,10 +73,10 @@ void handleCommand(String cmd)
 void setup() {
     Serial.begin(115200);
 
-    used_to_be_setup();       // Initialise display, SD card, and buffers
+    animation_setup();       // Initialise display, SD card, and buffers
     initTouch();
     setupLed();
-    switchFolder("/pride");   // Default emotion shown at startup
+    switchFolder("/mjpeg");   // Default emotion shown at startup
     
 
     Serial.println("Ready for UART commands");
@@ -93,20 +98,12 @@ void loop() {
         handleCommand(cmd);
     }
 
-    updateAnimationPlayer();
 
     uint16_t x, y, z;
     bool touchNow = getTouchPoint(x, y, z);
 
-    if (touchNow && !touchWasDown)
-    {
-        Serial.print("X = ");
-        Serial.print(x);
-        Serial.print(" | Y = ");
-        Serial.print(y);
-        Serial.print(" | Z = ");
-        Serial.println(z);
-    }
 
-    touchWasDown = touchNow;
+
+    updateAnimationPlayer();
+
 }

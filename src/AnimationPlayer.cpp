@@ -6,7 +6,7 @@
 // Target board : "ESP32 Dev Module" (last tested with Espressif Arduino Core v3.2.0)
 //
 // How it works:
-//   1. On first call to used_to_be_setup(), the display and SD card are initialised
+//   1. On first call to animation_setup(), the display and SD card are initialised
 //      and a list of .mjpeg files in the current emotion folder is built.
 //   2. updateAnimationPlayer() is called every loop iteration.  It plays the next
 //      .mjpeg file in the list and advances the index, looping back to 0 when it
@@ -20,6 +20,7 @@
                                  // Install "JPEGDEC" with the Library Manager (last tested on v1.8.2)
 #include "MjpegClass.h"          // Included in this project
 #include "SD.h"                  // Included with the Espressif Arduino Core (last tested on v3.2.0)
+#include "TouchHandler.h"
 
 // ---------------------------------------------------------------------------
 // Pin definitions
@@ -46,6 +47,8 @@
 // Animation state
 // ---------------------------------------------------------------------------
 String currentFolder = "/mjpeg"; // Active emotion folder on the SD card
+String pendingFolder = "";
+bool folderSwitchPending = false;
 
 // In-memory list of .mjpeg filenames found in currentFolder
 #define MAX_FILES 20
@@ -56,7 +59,7 @@ static int  currentMjpegIndex = 0;
 static File mjpegFile; // Temporary file handle used during playback
 
 // ---------------------------------------------------------------------------
-// MJPEG decoder state (allocated once in used_to_be_setup)
+// MJPEG decoder state (allocated once in animation_setup)
 // ---------------------------------------------------------------------------
 MjpegClass    mjpeg;
 int           total_frames;
@@ -117,7 +120,7 @@ String formatBytes(size_t bytes);
  *  - Boot-button interrupt
  *  - Initial file list for the default emotion folder
  */
-void used_to_be_setup()
+void animation_setup()
 {
     // Turn on the display backlight
     pinMode(BL_PIN, OUTPUT);
@@ -132,6 +135,8 @@ void used_to_be_setup()
     gfx->setRotation(0);
     gfx->fillScreen(RGB565_BLACK);
     // gfx->invertDisplay(true); // Uncomment on CYD variants with inverted colour
+
+    sd_spi.begin(SD_SCK, SD_MISO, SD_MOSI, SD_CS);
 
     // Initialise the SD card on VSPI
     if (!SD.begin(SD_CS, sd_spi, SD_SPI_SPEED, "/sd"))
@@ -209,6 +214,13 @@ void switchFolder(const String& newFolder)
     loadMjpegFilesList();
 }
 
+void requestFolderSwitch(const String& newFolder)
+{
+    pendingFolder = newFolder;
+    folderSwitchPending = true;
+    skipRequested = true;
+}
+
 /**
  * @brief JPEGDEC draw callback – blits a decoded JPEG tile to the display.
  *
@@ -262,6 +274,29 @@ void mjpegPlayFromSDCard(char *mjpegFilename)
     // Main decode/display loop – exits when the file ends or skip is requested
     while (!skipRequested && mjpegFile.available() && mjpeg.readMjpegBuf())
     {
+    uint16_t x, y, z;
+    bool touchNow = getTouchPoint(x, y, z);
+    
+    if (getTouchPoint(x, y, z))
+    {
+        if (x < 160 && y < 120)
+        {
+            Serial.println("Down right");
+        }
+        else if (x >= 160 && y < 120)
+        {
+            Serial.println("Down left");
+        }
+        else if (x < 160 && y >= 120)
+        {
+            Serial.println("Up right");
+        }
+        else
+        {
+            Serial.println("Up left");
+        }
+    }
+
         total_read_video += millis() - curr_ms;
         curr_ms = millis();
 
@@ -281,9 +316,18 @@ void mjpegPlayFromSDCard(char *mjpegFilename)
             lastPress = now;
         }
     }
-    skipRequested = false; // Clear flag so the next animation plays normally
-
+    skipRequested = false;
     mjpegFile.close();
+
+    if (folderSwitchPending)
+    {
+        currentFolder = pendingFolder;
+        currentMjpegIndex = 0;
+        loadMjpegFilesList();
+
+        pendingFolder = "";
+        folderSwitchPending = false;
+    }
 }
 
 /**

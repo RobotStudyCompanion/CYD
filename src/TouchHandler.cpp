@@ -29,26 +29,34 @@ void initTouch()
 
 bool getTouchPoint(uint16_t &x, uint16_t &y, uint16_t &z)
 {
-    Serial.print("IRQ = ");
-    Serial.print(digitalRead(TOUCH_IRQ));
-
-    if (!touchscreen.touched())
+    // XPT2046 IRQ on active-low:
+    // IRQ = 1 tähendab ei vajuta
+    // IRQ = 0 tähendab vajutab
+    if (digitalRead(TOUCH_IRQ) == HIGH)
     {
-        Serial.println(" | not touched");
         return false;
     }
 
     TS_Point p = touchscreen.getPoint();
 
-    Serial.print(" | RAW X = ");
-    Serial.print(p.x);
-    Serial.print(" | RAW Y = ");
-    Serial.print(p.y);
-    Serial.print(" | RAW Z = ");
-    Serial.println(p.z);
+    // liiga nõrk või tühi vajutus
+    if (p.z < 200)
+    {
+        return false;
+    }
 
-    x = p.x;
-    y = p.y;
+    // raw sanity check
+    if (p.x == 0 && p.y == 0)
+    {
+        return false;
+    }
+
+    x = map(p.x, 200, 3700, 0, SCREEN_WIDTH - 1);
+    y = map(p.y, 240, 3800, 0, SCREEN_HEIGHT - 1);
+
+    x = constrain(x, 0, SCREEN_WIDTH - 1);
+    y = constrain(y, 0, SCREEN_HEIGHT - 1);
+
     z = p.z;
 
     return true;
