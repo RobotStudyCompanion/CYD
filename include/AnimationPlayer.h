@@ -9,5 +9,6 @@ void playSelectedMjpeg(int mjpegIndex);
 void updateAnimationPlayer();
 void animation_setup();
 void requestFolderSwitch(const String& newFolder);
+void setCommandPoller(void (*poller)());
 
 #endif

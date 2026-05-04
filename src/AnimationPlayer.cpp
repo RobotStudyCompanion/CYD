@@ -107,6 +107,12 @@ void   playSelectedMjpeg(int mjpegIndex);
 void   mjpegPlayFromSDCard(char *mjpegFilename);
 void   switchFolder(const String& newFolder);
 String formatBytes(size_t bytes);
+void (*commandPoller)() = nullptr;
+
+void setCommandPoller(void (*poller)())
+{
+    commandPoller = poller;
+}
 
 
 /**
@@ -209,9 +215,16 @@ void playSelectedMjpeg(int mjpegIndex)
  */
 void switchFolder(const String& newFolder)
 {
+    if (currentFolder == newFolder)
+    {
+        return;
+    }
+
     currentFolder = newFolder;
     currentMjpegIndex = 0;
     loadMjpegFilesList();
+
+    skipRequested = true;
 }
 
 void requestFolderSwitch(const String& newFolder)
@@ -297,14 +310,29 @@ void mjpegPlayFromSDCard(char *mjpegFilename)
         }
     }
 
-        total_read_video += millis() - curr_ms;
-        curr_ms = millis();
+    if (commandPoller != nullptr)
+    {
+        commandPoller();
+    }
 
-        mjpeg.drawJpg();
-        total_decode_video += millis() - curr_ms;
+    if (skipRequested)
+    {
+        break;
+    }
 
-        curr_ms = millis();
-        total_frames++;
+    if (!mjpeg.readMjpegBuf())
+    {
+        break;
+    }
+
+    total_read_video += millis() - curr_ms;
+    curr_ms = millis();
+
+    mjpeg.drawJpg();
+    total_decode_video += millis() - curr_ms;
+
+    curr_ms = millis();
+    total_frames++;
     }
 
     // Handle debounced skip-button press

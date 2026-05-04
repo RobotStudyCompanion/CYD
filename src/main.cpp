@@ -63,6 +63,33 @@ void handleCommand(String cmd)
     }
 }
 
+String usbBuffer = "";
+String piBuffer = "";
+
+void readCommandFrom(Stream &port, String &buffer)
+{
+    while (port.available())
+    {
+        char c = port.read();
+
+        if (c == '\n')
+        {
+            handleCommand(buffer);
+            buffer = "";
+        }
+        else if (c != '\r')
+        {
+            buffer += c;
+        }
+    }
+}
+
+void checkUartCommand()
+{
+    readCommandFrom(Serial, usbBuffer);
+    readCommandFrom(Serial2, piBuffer);
+}
+
 /**
  * @brief Arduino setup – runs once after power-on or reset.
  *
@@ -72,13 +99,16 @@ void handleCommand(String cmd)
  */
 void setup() {
     Serial.begin(115200);
+    Serial2.begin(115200, SERIAL_8N1, 16, 17);
 
     animation_setup();       // Initialise display, SD card, and buffers
     initTouch();
     setupLed();
+    
+    setCommandPoller(checkUartCommand);
+
     switchFolder("/mjpeg");   // Default emotion shown at startup
     
-
     Serial.println("Ready for UART commands");
 }
 
@@ -93,17 +123,10 @@ bool touchWasDown = false;
  * only be processed after the current animation finishes.
  */
 void loop() {
-    if (Serial.available()) {
-        String cmd = Serial.readStringUntil('\n');
-        handleCommand(cmd);
-    }
-
+    checkUartCommand();
+    updateAnimationPlayer();
 
     uint16_t x, y, z;
     bool touchNow = getTouchPoint(x, y, z);
-
-
-
-    updateAnimationPlayer();
 
 }
