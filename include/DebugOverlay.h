@@ -7,3 +7,4 @@ void recordTouch(uint16_t x, uint16_t y, uint16_t z);
 // Reads touch, detects rising edge, logs, records dot, renders all active dots.
 // Call once per loop().
 void serviceDebugOverlay();
+void printMemoryReport();   // call any time; useful at boot and on demand

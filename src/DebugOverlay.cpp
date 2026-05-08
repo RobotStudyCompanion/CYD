@@ -67,3 +67,16 @@ void serviceDebugOverlay() {
 
     renderDots();
 }
+
+void printMemoryReport() {
+    Serial.println("=== Memory ===");
+    bool hasPsram = psramFound();
+    Serial.printf("PSRAM found: %s\n", hasPsram ? "yes" : "no");
+    if (hasPsram) {
+        Serial.printf("PSRAM size: %u KB\n", ESP.getPsramSize() / 1024);
+        Serial.printf("PSRAM free: %u KB\n", ESP.getFreePsram() / 1024);
+    }
+    Serial.printf("Heap free: %u KB\n", ESP.getFreeHeap() / 1024);
+    Serial.printf("Largest heap block: %u KB\n", ESP.getMaxAllocHeap() / 1024);
+    Serial.println("==============");
+}
