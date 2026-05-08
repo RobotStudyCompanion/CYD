@@ -8,6 +8,7 @@ struct Config {
     uint16_t eyeColour     = 0xFFFF;       // RGB565 (TFT_WHITE)
     uint16_t bgColour      = 0x0000;       // RGB565 (TFT_BLACK)
     char     mood[16]      = "NEUTRAL";    // null-terminated, max 15 chars
+    uint8_t brightness = 255;       // 0-255 backlight PWM duty (0=off, 255=full)
 };
 
 extern Config config;

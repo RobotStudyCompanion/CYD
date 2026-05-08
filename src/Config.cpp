@@ -2,6 +2,11 @@
 #include "FaceRenderer.h"
 #include <Preferences.h>
 #include "version.h"
+#include "DisplayInit.h"
+#include "DebugOverlay.h"
+#include "LED_Solution.h"
+#include <TFT_eSPI.h>
+extern TFT_eSPI tft;
 
 Config config;
 static Preferences prefs;
@@ -31,6 +36,7 @@ static void saveConfig() {
     prefs.putUShort("eyeCol",   config.eyeColour);
     prefs.putUShort("bgCol",    config.bgColour);
     prefs.putString("mood",     config.mood);
+    prefs.putUChar("bright", config.brightness);
     prefs.end();
 }
 
@@ -42,6 +48,7 @@ void initConfig() {
     config.eyeColour     = prefs.getUShort("eyeCol",   config.eyeColour);
     config.bgColour      = prefs.getUShort("bgCol",    config.bgColour);
     String savedMood     = prefs.getString("mood",     String(config.mood));
+    config.brightness = prefs.getUChar("bright", config.brightness);
     strncpy(config.mood, savedMood.c_str(), sizeof(config.mood) - 1);
     config.mood[sizeof(config.mood) - 1] = '\0';
     prefs.end();
@@ -77,17 +84,32 @@ static bool isKnownMood(const String &m) {
 // ---- Commands ----
 static void cmdHelp() {
     Serial.println("--- Commands ---");
-    Serial.println("touch_debug:on|off       Raw touch coord prints");
-    Serial.println("mood_cycle:on|off        Auto-cycle through moods");
-    Serial.println("touch_dots:on|off        Show green dots on tap");
-    Serial.println("eye_colour:RRGGBB        6 hex digits, e.g. 00FF00");
-    Serial.println("bg_colour:RRGGBB");
-    Serial.println("mood:NAME                NEUTRAL|HAPPY|ANGRY|SAD|EXCITED|");
-    Serial.println("                         ANNOYED|QUESTIONING|IDLE1|IDLE2|IDLE3");
-    Serial.println("status                   Print current config");
-    Serial.println("reset                    Clear NVS, reboot to defaults");
-    Serial.println("help                     This message");
-    Serial.println("version                  Print firmware version");
+    Serial.println("Setters (key:value):");
+    Serial.println("  touch_debug:on|off");
+    Serial.println("  mood_cycle:on|off");
+    Serial.println("  touch_dots:on|off");
+    Serial.println("  eye_colour:RRGGBB        6 hex digits, e.g. 00FF00");
+    Serial.println("  bg_colour:RRGGBB");
+    Serial.println("  mood:NAME                NEUTRAL|HAPPY|ANGRY|SAD|EXCITED|");
+    Serial.println("                           ANNOYED|QUESTIONING|IDLE1|IDLE2|IDLE3");
+    Serial.println("  bright:0-255             Backlight PWM");
+    Serial.println("  led:NAME|r,g,b           off|on|red|green|blue|white|");
+    Serial.println("                           yellow|cyan|magenta or 1,0,1");
+    Serial.println("  tap:x,y[,z]              Inject touch event");
+    Serial.println("Getters (key?):");
+    Serial.println("  touch_debug? mood_cycle? touch_dots? eye_colour? bg_colour?");
+    Serial.println("  mood? bright?");
+    Serial.println("Plain:");
+    Serial.println("  status     Print current config");
+    Serial.println("  version    Print firmware version");
+    Serial.println("  mem        Memory snapshot");
+    Serial.println("  uptime     Time since boot");
+    Serial.println("  ldr        Light sensor reading");
+    Serial.println("  clear      Fill screen with bg colour");
+    Serial.println("  splash     Re-show RSC splash");
+    Serial.println("  reboot     Soft reboot (config preserved)");
+    Serial.println("  reset      Clear NVS, reboot to defaults");
+    Serial.println("  help       This message");
 }
 
 static void cmdStatus() {
@@ -99,6 +121,7 @@ static void cmdStatus() {
     Serial.printf("eye_colour:     %06X\n", (unsigned)rgb565_to_888(config.eyeColour));
     Serial.printf("bg_colour:      %06X\n", (unsigned)rgb565_to_888(config.bgColour));
     Serial.printf("mood:           %s\n", config.mood);
+    Serial.printf("bright:         %u\n", config.brightness);
 }
 
 static void cmdReset() {
@@ -110,6 +133,12 @@ static void cmdReset() {
     ESP.restart();
 }
 
+static void cmdReboot() {
+    Serial.println("OK: rebooting in 1 second...");
+    delay(1000);
+    ESP.restart();
+}
+
 // ---- Dispatch ----
 static void parseLine(const String &raw) {
     String line = raw;
@@ -117,13 +146,37 @@ static void parseLine(const String &raw) {
     if (line.length() == 0) return;
 
     String lower = line; lower.toLowerCase();
-    if (lower == "help")   { cmdHelp();   return; }
-    if (lower == "status") { cmdStatus(); return; }
-    if (lower == "reset")  { cmdReset();  return; }
-    if (lower == "version") {
-        Serial.printf("version: %s\n", FW_VERSION);
+
+    // ---- Plain commands ----
+    if (lower == "help")    { cmdHelp();   return; }
+    if (lower == "status")  { cmdStatus(); return; }
+    if (lower == "reset")   { cmdReset();  return; }
+    if (lower == "reboot")  { cmdReboot(); return; }
+    if (lower == "version") { Serial.printf("version: %s\n", FW_VERSION); return; }
+    if (lower == "mem")     { printMemoryReport(); return; }
+    if (lower == "uptime")  { printUptime(); return; }
+    if (lower == "ldr")     { printLdr(); return; }
+    if (lower == "clear")   { tft.fillScreen(config.bgColour); Serial.println("OK"); return; }
+    if (lower == "splash")  { showSplash(); Serial.println("OK"); return; }
+
+    // ---- Getters (key?) ----
+    if (lower.endsWith("?")) {
+        String key = lower.substring(0, lower.length() - 1);
+        key.trim();
+        if      (key == "touch_debug") Serial.printf("touch_debug: %s\n", config.touchDebug    ? "on" : "off");
+        else if (key == "mood_cycle")  Serial.printf("mood_cycle: %s\n",  config.moodAutoCycle ? "on" : "off");
+        else if (key == "touch_dots")  Serial.printf("touch_dots: %s\n",  config.showTouchDots ? "on" : "off");
+        else if (key == "eye_colour" || key == "eye_color")
+            Serial.printf("eye_colour: %06X\n", (unsigned)rgb565_to_888(config.eyeColour));
+        else if (key == "bg_colour" || key == "bg_color")
+            Serial.printf("bg_colour: %06X\n", (unsigned)rgb565_to_888(config.bgColour));
+        else if (key == "mood")        Serial.printf("mood: %s\n", config.mood);
+        else if (key == "bright")      Serial.printf("bright: %u\n", config.brightness);
+        else                           Serial.printf("ERR: cannot get '%s'\n", key.c_str());
         return;
     }
+
+    // ---- Setters (key:value) ----
     int colon = line.indexOf(':');
     if (colon < 0) {
         Serial.printf("ERR: bad syntax '%s' (try 'help')\n", line.c_str());
@@ -138,44 +191,66 @@ static void parseLine(const String &raw) {
     if (key == "touch_debug") {
         bool b;
         if (!parseBool(val, b)) { Serial.println("ERR: bad bool"); return; }
-        config.touchDebug = b;
-        saveConfig();
-        Serial.println("OK");
+        config.touchDebug = b; saveConfig(); Serial.println("OK");
     }
     else if (key == "mood_cycle") {
         bool b;
         if (!parseBool(val, b)) { Serial.println("ERR: bad bool"); return; }
-        config.moodAutoCycle = b;
-        saveConfig();
-        Serial.println("OK");
+        config.moodAutoCycle = b; saveConfig(); Serial.println("OK");
     }
     else if (key == "touch_dots") {
         bool b;
         if (!parseBool(val, b)) { Serial.println("ERR: bad bool"); return; }
-        config.showTouchDots = b;
-        saveConfig();
-        Serial.println("OK");
+        config.showTouchDots = b; saveConfig(); Serial.println("OK");
     }
     else if (key == "eye_colour" || key == "eye_color") {
         uint16_t c;
         if (!parseColour(val, c)) { Serial.println("ERR: bad colour (need 6 hex digits)"); return; }
-        setEyeColour(c);
-        saveConfig();
-        Serial.println("OK");
+        setEyeColour(c); saveConfig(); Serial.println("OK");
     }
     else if (key == "bg_colour" || key == "bg_color") {
         uint16_t c;
         if (!parseColour(val, c)) { Serial.println("ERR: bad colour"); return; }
-        setBackgroundColour(c);
-        saveConfig();
-        Serial.println("OK");
+        setBackgroundColour(c); saveConfig(); Serial.println("OK");
     }
     else if (key == "mood") {
         String upper = val; upper.toUpperCase();
         if (!isKnownMood(upper)) { Serial.printf("ERR: unknown mood '%s'\n", val.c_str()); return; }
-        setMood(upper.c_str());
-        saveConfig();
+        setMood(upper.c_str()); saveConfig(); Serial.println("OK");
+    }
+    else if (key == "bright") {
+        int v = val.toInt();
+        if (v < 0 || v > 255) { Serial.println("ERR: bright 0-255"); return; }
+        setBacklight((uint8_t)v); saveConfig(); Serial.println("OK");
+    }
+    else if (key == "led") {
+        String v = val; v.toLowerCase();
+        bool r = false, g = false, b = false;
+        bool ok = true;
+        if      (v == "off")     { /* all false */ }
+        else if (v == "on" || v == "white") { r = g = b = true; }
+        else if (v == "red")     { r = true; }
+        else if (v == "green")   { g = true; }
+        else if (v == "blue")    { b = true; }
+        else if (v == "yellow")  { r = true; g = true; }
+        else if (v == "cyan")    { g = true; b = true; }
+        else if (v == "magenta") { r = true; b = true; }
+        else {
+            int rn, gn, bn;
+            if (sscanf(v.c_str(), "%d,%d,%d", &rn, &gn, &bn) != 3) ok = false;
+            else { r = (rn != 0); g = (gn != 0); b = (bn != 0); }
+        }
+        if (!ok) { Serial.println("ERR: bad led (try off|on|red|green|blue|white|yellow|cyan|magenta or r,g,b)"); return; }
+        setLedColor(r, g, b);
         Serial.println("OK");
+    }
+    else if (key == "tap") {
+        int x, y, z = 1500;
+        int n = sscanf(val.c_str(), "%d,%d,%d", &x, &y, &z);
+        if (n < 2) { Serial.println("ERR: bad tap (need x,y or x,y,z)"); return; }
+        if (x < 0 || x >= 320 || y < 0 || y >= 240) { Serial.println("ERR: out of range"); return; }
+        recordTouch((uint16_t)x, (uint16_t)y, (uint16_t)z);
+        Serial.printf("OK: tap (%d, %d) z=%d\n", x, y, z);
     }
     else {
         Serial.printf("ERR: unknown key '%s'\n", key.c_str());

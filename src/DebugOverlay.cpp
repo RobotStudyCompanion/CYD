@@ -4,6 +4,8 @@
 #include <TFT_eSPI.h>
 #include "version.h"
 
+static const int LDR_PIN = 34;   // CYD photoresistor on ADC1
+
 extern TFT_eSPI tft;
 
 static const int      MAX_DOTS        = 8;
@@ -84,4 +86,20 @@ void printMemoryReport() {
 
 void printVersion() {
     Serial.printf("Firmware: %s\n", FW_VERSION);
+}
+
+void printUptime() {
+    uint32_t ms  = millis();
+    uint32_t sec = ms / 1000;
+    uint32_t min = sec / 60;
+    uint32_t hr  = min / 60;
+    Serial.printf("uptime: %02u:%02u:%02u (%u ms)\n",
+                  hr, (unsigned)(min % 60), (unsigned)(sec % 60), ms);
+}
+
+void printLdr() {
+    uint32_t sum = 0;
+    for (int i = 0; i < 8; i++) sum += analogRead(LDR_PIN);
+    uint16_t avg = sum / 8;
+    Serial.printf("ldr: %u\n", avg);
 }
