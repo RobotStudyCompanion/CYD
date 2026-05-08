@@ -23,3 +23,7 @@ void setFaceLeft  (const FaceShape &shape);   // left only, right preserved
 void setFaceRight (const FaceShape &shape);   // right only, left preserved
 void getFaceLeft  (FaceShape &out);
 void getFaceRight (FaceShape &out);
+
+void pauseFace();
+void resumeFace();
+bool isFacePaused();

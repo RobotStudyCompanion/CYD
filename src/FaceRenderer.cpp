@@ -12,6 +12,7 @@ static FaceShape _customL = {0, 0, 0, 30, 45};   // default = MOOD_NEUTRAL
 static FaceShape _customR = {0, 0, 0, 30, 45};
 static uint32_t _splashUntil = 0;             // 0 = inactive; else millis() at which to clear
 static constexpr uint32_t SPLASH_DURATION_MS = 800;
+static bool _paused = false;
 
 // Internal helper — (re)builds the eyes with current colour state.
 static void rebuildEyes()
@@ -60,10 +61,11 @@ void serviceFaceRenderer()
         _tft->fillScreen(config.bgColour);       // splash done, clear before face takes over
         _splashUntil = 0;
     }
-
+    if (_paused) return;   // <-- new
     if (config.moodAutoCycle) _eyes->moodSwitch(true);
     _eyes->renderEmotions(*_canvas);
     if (_hudOn) _eyes->HUD(*_tft);
+    
 }
 
 void setEyeColour(uint16_t rgb565)
@@ -118,3 +120,6 @@ void setFaceRight(const FaceShape &shape) {
 }
 void getFaceLeft (FaceShape &out) { out = _customL; }
 void getFaceRight(FaceShape &out) { out = _customR; }
+void pauseFace()    { _paused = true; }
+void resumeFace()   { _paused = false; }
+bool isFacePaused() { return _paused; }

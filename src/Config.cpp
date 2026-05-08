@@ -254,13 +254,15 @@ static void cmdReboot() {
     Serial.println("OK: rebooting in 1 second...");
     delay(1000); ESP.restart();
 }
-static void cmdMem()    { printMemoryReport(); }
-static void cmdUptime() { printUptime(); }
-static void cmdLdr()    { printLdr(); }
-static void cmdClear()  { tft.fillScreen(config.bgColour); Serial.println("OK"); }
-static void cmdGetLight() { Serial.printf("light: %u\n", getLdrBrightnessPct()); }
-static void cmdGetLux()   { Serial.printf("lux: %u\n",   getLdrLuxish()); }
-static void cmdSplash() { showSplash(); Serial.println("OK"); }
+static void cmdMem()        { printMemoryReport(); }
+static void cmdUptime()     { printUptime(); }
+static void cmdLdr()        { printLdr(); }
+static void cmdClear()      { tft.fillScreen(config.bgColour); Serial.println("OK"); }
+static void cmdGetLight()   { Serial.printf("light: %u\n", getLdrBrightnessPct()); }
+static void cmdGetLux()     { Serial.printf("lux: %u\n",   getLdrLuxish()); }
+static void cmdSplash()     { showSplash(); Serial.println("OK"); }
+static void cmdPause()      { pauseFace();  Serial.println("OK: face paused"); }
+static void cmdResume()     { resumeFace(); Serial.println("OK: face resumed"); }
 
 // Forward decls for cmds that iterate the table
 static void cmdHelp();
@@ -310,6 +312,8 @@ static const Command commands[] = {
     {"lux",          nullptr,           cmdGetLux,         "inverted ldr (higher=brighter)"},
     {"clear",        nullptr,           cmdClear,          "fill screen with bg colour"},
     {"splash",       nullptr,           cmdSplash,         "re-show RSC splash"},
+    {"pause",        nullptr,           cmdPause,          "freeze face renderer (use 'resume' to unfreeze)"},
+    {"resume",       nullptr,           cmdResume,         "resume face renderer"},
     {"reboot",       nullptr,           cmdReboot,         "soft reboot (config preserved)"},
     {"reset",        nullptr,           cmdReset,          "clear NVS, reboot to defaults"},
 };
