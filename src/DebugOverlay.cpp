@@ -4,7 +4,9 @@
 #include <TFT_eSPI.h>
 #include "version.h"
 
-static const int LDR_PIN = 34;   // CYD photoresistor on ADC1
+static const int LDR_PIN = 32;   // CYD photoresistor on ADC1; pins tried: 34,35 (unexpected behaviour)
+// 36 gave 4095 always, 39 (gave 91, 81, 102... odd), 33 (starts at 2171 then drops to 267, 264)
+// 32 (10, then 334, 327, 338...odd)
 
 extern TFT_eSPI tft;
 
