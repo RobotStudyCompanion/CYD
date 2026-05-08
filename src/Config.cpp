@@ -6,6 +6,8 @@
 #include "version.h"
 #include <Preferences.h>
 #include <TFT_eSPI.h>
+#include "LdrSensor.h"
+
 
 extern TFT_eSPI tft;
 
@@ -38,6 +40,9 @@ static void saveConfig() {
     prefs.putUShort("bgCol",    config.bgColour);
     prefs.putString("mood",     config.mood);
     prefs.putUChar("bright",    config.brightness);
+    prefs.putBool ("autoBright", config.autoBright);
+    prefs.putUChar("brLight",    config.brightLight);
+    prefs.putUChar("brDark",     config.brightDark);
     prefs.putBool("hudOn",      config.hudOn);
     prefs.end();
 }
@@ -53,6 +58,9 @@ void initConfig() {
     if (config.brightness > 100) {
         config.brightness = (config.brightness * 100) / 255;  // legacy 0-255 -> 0-100
     }
+    config.autoBright  = prefs.getBool ("autoBright", config.autoBright);
+    config.brightLight = prefs.getUChar("brLight",    config.brightLight);
+    config.brightDark  = prefs.getUChar("brDark",     config.brightDark);
     String savedMood     = prefs.getString("mood",     String(config.mood));
     strncpy(config.mood, savedMood.c_str(), sizeof(config.mood) - 1);
     config.mood[sizeof(config.mood) - 1] = '\0';
@@ -127,8 +135,27 @@ static void cmdSetMood(const String &val) {
 static void cmdSetBright(const String &val) {
     int v = val.toInt();
     if (v < 0 || v > 100) { Serial.println("ERR: bright 0-100"); return; }
+    config.autoBright = false;
     setBacklight((uint8_t)v); saveConfig(); Serial.println("OK");
 }
+
+static void cmdSetAutoBright(const String &val) {
+    bool b;
+    if (!parseBool(val, b)) { Serial.println("ERR: bad bool"); return; }
+    config.autoBright = b; saveConfig();
+    Serial.println(b ? "OK: auto on" : "OK: auto off");
+}
+static void cmdSetBrightLight(const String &val) {
+    int v = val.toInt();
+    if (v < 0 || v > 100) { Serial.println("ERR: 0-100"); return; }
+    config.brightLight = (uint8_t)v; saveConfig(); Serial.println("OK");
+}
+static void cmdSetBrightDark(const String &val) {
+    int v = val.toInt();
+    if (v < 0 || v > 100) { Serial.println("ERR: 0-100"); return; }
+    config.brightDark = (uint8_t)v; saveConfig(); Serial.println("OK");
+}
+
 static void cmdSetLed(const String &val) {
     String v = val; v.toLowerCase();
     bool r = false, g = false, b = false;
@@ -211,6 +238,10 @@ static void cmdGetEyeColour()  { Serial.printf("eye_colour:     %06X\n", (unsign
 static void cmdGetBgColour()   { Serial.printf("bg_colour:      %06X\n", (unsigned)rgb565_to_888(config.bgColour)); }
 static void cmdGetMood()       { Serial.printf("mood:           %s\n", config.mood); }
 static void cmdGetBright()     { Serial.printf("bright:         %u%%\n", config.brightness); }
+static void cmdGetAutoBright() { Serial.printf("auto_bright:    %s\n", config.autoBright ? "on" : "off"); }
+static void cmdGetBrightLight(){ Serial.printf("bright_light:   %u%%\n", config.brightLight); }
+static void cmdGetBrightDark() { Serial.printf("bright_dark:    %u%%\n", config.brightDark); }
+
 static void cmdGetVersion()    { Serial.printf("version:        %s\n", FW_VERSION); }
 
 // ============ Action handlers (no value, no get/set distinction) ============
@@ -254,16 +285,18 @@ static const Command commands[] = {
     {"bg_color",     cmdSetBgColour,    cmdGetBgColour,    nullptr},   // alias, hidden
     {"mood",         cmdSetMood,        cmdGetMood,        "NEUTRAL|HAPPY|ANGRY|SAD|EXCITED|ANNOYED|QUESTIONING|IDLE1-3"},
     {"bright",       cmdSetBright,      cmdGetBright,      "0-100 backlight %"},
-    {"look",   cmdSetLook,  cmdGetLook,  "x,y canvas offset"},
-    {"hud",    cmdSetHud,   cmdGetHud,   "on|off Grobot HUD overlay"},
-    {"face",   cmdSetFace,  cmdGetFace,  "topH,botH,tilt,pR,r — symmetric custom mood (floats)"},
-    {"face_l", cmdSetFaceL, cmdGetFaceL, "topH,botH,tilt,pR,r — left eye only"},
-    {"face_r", cmdSetFaceR, cmdGetFaceR, "topH,botH,tilt,pR,r — right eye only"},
+    {"auto_bright",  cmdSetAutoBright,  cmdGetAutoBright,  "on|off LDR-driven brightness"},
+    {"bright_light", cmdSetBrightLight, cmdGetBrightLight, "0-100 target % when bright"},
+    {"bright_dark",  cmdSetBrightDark,  cmdGetBrightDark,  "0-100 target % when dark"},
+    {"look",         cmdSetLook,        cmdGetLook,         "x,y canvas offset"},
+    {"hud",          cmdSetHud,         cmdGetHud,          "on|off Grobot HUD overlay"},
+    {"face",         cmdSetFace,        cmdGetFace,         "topH,botH,tilt,pR,r — symmetric custom mood (floats)"},
+    {"face_l",       cmdSetFaceL,       cmdGetFaceL,        "topH,botH,tilt,pR,r — left eye only"},
+    {"face_r",       cmdSetFaceR,       cmdGetFaceR,        "topH,botH,tilt,pR,r — right eye only"},
     
     // Set-only commands
     {"led",          cmdSetLed,         nullptr,           "off|on|red|green|blue|white|yellow|cyan|magenta or r,g,b"},
     {"tap",          cmdSetTap,         nullptr,           "x,y[,z] inject touch"},
-    {"blink",  nullptr,     cmdBlink,    "trigger one blink"},
 
     // Plain actions (and queries with no setter)
     {"help",         nullptr,           cmdHelp,           "this message"},
@@ -271,6 +304,7 @@ static const Command commands[] = {
     {"version",      nullptr,           cmdGetVersion,     "firmware version"},
     {"mem",          nullptr,           cmdMem,            "memory snapshot"},
     {"uptime",       nullptr,           cmdUptime,         "time since boot"},
+    {"blink",        nullptr,           cmdBlink,          "trigger one blink"},
     {"ldr",          nullptr,           cmdLdr,            "light sensor reading"},
     {"light",        nullptr,           cmdGetLight,       "ambient brightness 0-100%"},
     {"lux",          nullptr,           cmdGetLux,         "inverted ldr (higher=brighter)"},

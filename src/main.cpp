@@ -4,6 +4,7 @@
 #include "TouchHandler.h"
 #include "DisplayInit.h"
 #include "DebugOverlay.h"
+#include "LdrSensor.h"
 #include "Config.h"
 
 void setup() {
@@ -22,4 +23,5 @@ void loop() {
     serviceConfig();
     serviceFaceRenderer();
     serviceDebugOverlay();
+    serviceLdr();
 }

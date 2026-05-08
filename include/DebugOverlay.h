@@ -10,8 +10,3 @@ void serviceDebugOverlay();
 void printMemoryReport();   // call any time; useful at boot and on demand
 void printVersion();   // prints FW_VERSION line
 void printUptime();
-void printLdr();
-uint16_t getLdrRaw();           // 0–4095, lower = brighter
-uint16_t getLdrLuxish();        // 0–4095, higher = brighter (raw inverted)
-uint8_t  getLdrBrightnessPct(); // 0–100, calibrated against LDR_DARK_REF
-// bool isRoomTooDark();  // hysteretic: true if ambient too low for comfortable reading

@@ -10,6 +10,9 @@ struct Config {
     char     mood[16]      = "NEUTRAL";    // null-terminated, max 15 chars
     uint8_t brightness = 100;       // 0-100 backlight % (converts to PWM 0=off, 255=full)
     bool hudOn = false;
+    bool    autoBright  = false;
+    uint8_t brightLight = 100;   // target % in bright rooms
+    uint8_t brightDark  = 30;    // target % in dark rooms
 };
 
 extern Config config;
