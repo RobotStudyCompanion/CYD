@@ -1,28 +1,19 @@
 // AnimationPlayer.cpp
-// Hardware bring-up for the CYD display.
-// SD/MJPEG playback removed — superseded by FaceRenderer.
+// Display init via TFT_eSPI. All pins/backlight/speed live in platformio.ini
+// under USER_SETUP_LOADED build flags.
+// Name retained for now; rename to DisplayInit.cpp in a later cleanup PR.
 
-#include <Arduino_GFX_Library.h>
+#include <TFT_eSPI.h>
 #include "FaceRenderer.h"
 
-#define BL_PIN 21
-#define DISPLAY_SPI_SPEED 80000000L
-
-Arduino_DataBus *bus = new Arduino_HWSPI(2, 15, 14, 13, 12);
-Arduino_GFX     *gfx = new Arduino_ILI9341(bus);
+TFT_eSPI tft = TFT_eSPI();
 
 void initAnimationPlayer()
 {
-    pinMode(BL_PIN, OUTPUT);
-    digitalWrite(BL_PIN, HIGH);
+    tft.init();
+    tft.setRotation(1);     // landscape, matches touch rotation
+    tft.fillScreen(TFT_BLACK);
 
-    if (!gfx->begin(DISPLAY_SPI_SPEED)) {
-        Serial.println("Display init failed");
-        return;
-    }
-    gfx->setRotation(1);   // landscape, matches touch
-    gfx->fillScreen(0x0000);
-
-    initFaceRenderer(gfx);
+    initFaceRenderer(&tft);
     showSplash();
 }

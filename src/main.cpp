@@ -2,8 +2,9 @@
 #include "FaceRenderer.h"
 #include "LED_Solution.h"
 #include "TouchHandler.h"
-
-void initAnimationPlayer();  // forward decl
+#include "AnimationPlayer.h"
+#include "DebugOverlay.h"
+#include "Config.h"
 
 void setup() {
     Serial.begin(115200);
@@ -27,25 +28,16 @@ void setup() {
     Serial.print(ESP.getMaxAllocHeap() / 1024);
     Serial.println(" KB");
     Serial.println("==============");
+    initConfig(); //must come before initAnimationPlayer
     initAnimationPlayer();
     initTouch();
     setupLed();
-
+    
     Serial.println("RSC ready");
 }
 
-bool touchWasDown = false;
-
 void loop() {
+    serviceConfig();
     serviceFaceRenderer();
-
-    uint16_t x, y, z;
-    bool touchNow = getTouchPoint(x, y, z);
-    if (touchNow && !touchWasDown) {
-        Serial.print("Touch X = ");
-        Serial.print(x);
-        Serial.print(" Y = ");
-        Serial.println(y);
-    }
-    touchWasDown = touchNow;
+    serviceDebugOverlay();
 }
