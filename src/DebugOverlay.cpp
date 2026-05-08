@@ -2,6 +2,7 @@
 #include "TouchHandler.h"
 #include "Config.h"
 #include <TFT_eSPI.h>
+#include "version.h"
 
 extern TFT_eSPI tft;
 
@@ -79,4 +80,8 @@ void printMemoryReport() {
     Serial.printf("Heap free: %u KB\n", ESP.getFreeHeap() / 1024);
     Serial.printf("Largest heap block: %u KB\n", ESP.getMaxAllocHeap() / 1024);
     Serial.println("==============");
+}
+
+void printVersion() {
+    Serial.printf("Firmware: %s\n", FW_VERSION);
 }

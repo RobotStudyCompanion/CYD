@@ -9,6 +9,7 @@
 void setup() {
     Serial.begin(115200);
     Serial.setTimeout(50);
+    printVersion();
     printMemoryReport();
     initConfig(); //must come before initDisplay so persisted config applies
     initDisplay();

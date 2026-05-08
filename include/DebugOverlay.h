@@ -8,3 +8,4 @@ void recordTouch(uint16_t x, uint16_t y, uint16_t z);
 // Call once per loop().
 void serviceDebugOverlay();
 void printMemoryReport();   // call any time; useful at boot and on demand
+void printVersion();   // prints FW_VERSION line

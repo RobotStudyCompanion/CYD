@@ -1,6 +1,7 @@
 #include "Config.h"
 #include "FaceRenderer.h"
 #include <Preferences.h>
+#include "version.h"
 
 Config config;
 static Preferences prefs;
@@ -86,10 +87,12 @@ static void cmdHelp() {
     Serial.println("status                   Print current config");
     Serial.println("reset                    Clear NVS, reboot to defaults");
     Serial.println("help                     This message");
+    Serial.println("version                  Print firmware version");
 }
 
 static void cmdStatus() {
     Serial.println("--- Status ---");
+    Serial.printf("version:        %s\n", FW_VERSION);
     Serial.printf("touch_debug:    %s\n", config.touchDebug    ? "on" : "off");
     Serial.printf("mood_cycle:     %s\n", config.moodAutoCycle ? "on" : "off");
     Serial.printf("touch_dots:     %s\n", config.showTouchDots ? "on" : "off");
@@ -117,7 +120,10 @@ static void parseLine(const String &raw) {
     if (lower == "help")   { cmdHelp();   return; }
     if (lower == "status") { cmdStatus(); return; }
     if (lower == "reset")  { cmdReset();  return; }
-
+    if (lower == "version") {
+        Serial.printf("version: %s\n", FW_VERSION);
+        return;
+    }
     int colon = line.indexOf(':');
     if (colon < 0) {
         Serial.printf("ERR: bad syntax '%s' (try 'help')\n", line.c_str());
