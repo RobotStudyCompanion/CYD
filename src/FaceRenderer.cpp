@@ -6,6 +6,10 @@
 static TFT_eSPI    *_tft     = nullptr;
 static TFT_eSprite *_canvas  = nullptr;
 static GrobotEyes  *_eyes    = nullptr;
+static int16_t _lookX = 0, _lookY = 0;
+static bool _hudOn = false;
+static FaceShape _customL = {0, 0, 0, 30, 45};   // default = MOOD_NEUTRAL
+static FaceShape _customR = {0, 0, 0, 30, 45};
 
 // Internal helper — (re)builds the eyes with current colour state.
 static void rebuildEyes()
@@ -29,6 +33,7 @@ void initFaceRenderer(TFT_eSPI *tft)
     _canvas->fillSprite(config.bgColour);
 
     rebuildEyes();
+    _hudOn = config.hudOn;
 }
 
 void showSplash()
@@ -50,6 +55,7 @@ void serviceFaceRenderer()
     if (!_tft || !_canvas || !_eyes) return;
     if (config.moodAutoCycle) _eyes->moodSwitch(true);
     _eyes->renderEmotions(*_canvas);
+    if (_hudOn) _eyes->HUD(*_tft);
 }
 
 void setEyeColour(uint16_t rgb565)
@@ -79,3 +85,28 @@ void setMood(const char *moodName)
     config.mood[sizeof(config.mood) - 1] = '\0';
     if (_eyes) _eyes->setEmotion(String(moodName));
 }
+
+void setLookAt(int16_t x, int16_t y) { if (!_eyes) return; _lookX = x; _lookY = y; _eyes->lookAt(x, y); }
+void getLookAt(int16_t &x, int16_t &y) { x = _lookX; y = _lookY; }
+void triggerBlink() { if (_eyes) _eyes->blink(); }
+void setHud(bool on) { _hudOn = on; }
+
+static MoodData toMood(const FaceShape &s) {
+    return MoodData{s.topH, s.botH, s.tilt, s.pR, s.radius};
+}
+
+void setFaceCustom(const FaceShape &shape) {
+    _customL = shape;
+    _customR = shape;
+    if (_eyes) _eyes->setEmotion(toMood(shape));
+}
+void setFaceLeft(const FaceShape &shape) {
+    _customL = shape;
+    if (_eyes) _eyes->setEmotion(toMood(_customL), toMood(_customR));
+}
+void setFaceRight(const FaceShape &shape) {
+    _customR = shape;
+    if (_eyes) _eyes->setEmotion(toMood(_customL), toMood(_customR));
+}
+void getFaceLeft (FaceShape &out) { out = _customL; }
+void getFaceRight(FaceShape &out) { out = _customR; }

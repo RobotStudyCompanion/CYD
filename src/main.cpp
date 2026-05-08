@@ -15,7 +15,6 @@ void setup() {
     initDisplay();
     initTouch();
     setupLed();
-    
     Serial.println("RSC ready");
 }
 

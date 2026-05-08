@@ -4,9 +4,17 @@
 #include <TFT_eSPI.h>
 #include "version.h"
 
-static const int LDR_PIN = 32;   // CYD photoresistor on ADC1; pins tried: 34,35 (unexpected behaviour)
-// 36 gave 4095 always, 39 (gave 91, 81, 102... odd), 33 (starts at 2171 then drops to 267, 264)
-// 32 (10, then 334, 327, 338...odd)
+static const int LDR_PIN = 34;
+
+// LDR wiring: 3V3 -> fixed R -> GPIO34 -> LDR -> GND.
+// analogRead therefore reads LOWER for BRIGHTER (bright ~0, dark ~LDR_DARK_REF).
+// Use getLdrLuxish() or getLdrBrightnessPct() for "bigger = brighter" semantics.
+static constexpr uint16_t LDR_DARK_REF = 1000; // observed dark ceiling — tune empirically
+
+// Hysteresis thresholds for "too dark" warning. Tune to your room.
+// Trip when raw rises above _ENTER (room got dim), clear when it drops below _EXIT.
+static constexpr uint16_t LDR_DARK_ENTER = 700;
+static constexpr uint16_t LDR_DARK_EXIT  = 400;
 
 extern TFT_eSPI tft;
 
@@ -99,9 +107,22 @@ void printUptime() {
                   hr, (unsigned)(min % 60), (unsigned)(sec % 60), ms);
 }
 
-void printLdr() {
+uint16_t getLdrRaw() {
     uint32_t sum = 0;
     for (int i = 0; i < 8; i++) sum += analogRead(LDR_PIN);
-    uint16_t avg = sum / 8;
-    Serial.printf("ldr: %u\n", avg);
+    return sum / 8;
+}
+
+uint16_t getLdrLuxish() {
+    return 4095 - getLdrRaw();
+}
+
+uint8_t getLdrBrightnessPct() {
+    uint16_t raw = getLdrRaw();
+    if (raw >= LDR_DARK_REF) return 0;
+    return (uint8_t)(((LDR_DARK_REF - raw) * 100UL) / LDR_DARK_REF);
+}
+
+void printLdr() {
+    Serial.printf("ldr: %u\n", getLdrRaw());
 }

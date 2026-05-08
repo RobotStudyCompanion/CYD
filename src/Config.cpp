@@ -38,6 +38,7 @@ static void saveConfig() {
     prefs.putUShort("bgCol",    config.bgColour);
     prefs.putString("mood",     config.mood);
     prefs.putUChar("bright",    config.brightness);
+    prefs.putBool("hudOn",      config.hudOn);
     prefs.end();
 }
 
@@ -49,6 +50,9 @@ void initConfig() {
     config.eyeColour     = prefs.getUShort("eyeCol",   config.eyeColour);
     config.bgColour      = prefs.getUShort("bgCol",    config.bgColour);
     config.brightness    = prefs.getUChar("bright",    config.brightness);
+    if (config.brightness > 100) {
+        config.brightness = (config.brightness * 100) / 255;  // legacy 0-255 -> 0-100
+    }
     String savedMood     = prefs.getString("mood",     String(config.mood));
     strncpy(config.mood, savedMood.c_str(), sizeof(config.mood) - 1);
     config.mood[sizeof(config.mood) - 1] = '\0';
@@ -69,6 +73,13 @@ static bool parseColour(const String &v, uint16_t &rgb565) {
     uint32_t rgb888 = strtoul(v.c_str(), &end, 16);
     if (*end != '\0') return false;
     rgb565 = rgb888_to_565(rgb888);
+    return true;
+}
+
+static bool parseFaceShape(const String &v, FaceShape &out) {
+    float t, b, ti, pr, r;
+    if (sscanf(v.c_str(), "%f,%f,%f,%f,%f", &t, &b, &ti, &pr, &r) != 5) return false;
+    out = {t, b, ti, pr, r};
     return true;
 }
 
@@ -115,7 +126,7 @@ static void cmdSetMood(const String &val) {
 }
 static void cmdSetBright(const String &val) {
     int v = val.toInt();
-    if (v < 0 || v > 255) { Serial.println("ERR: bright 0-255"); return; }
+    if (v < 0 || v > 100) { Serial.println("ERR: bright 0-100"); return; }
     setBacklight((uint8_t)v); saveConfig(); Serial.println("OK");
 }
 static void cmdSetLed(const String &val) {
@@ -148,6 +159,50 @@ static void cmdSetTap(const String &val) {
     Serial.printf("OK: tap (%d, %d) z=%d\n", x, y, z);
 }
 
+static void cmdSetFace(const String &val) {
+    FaceShape s;
+    if (!parseFaceShape(val, s)) { Serial.println("ERR: bad face (need topH,botH,tilt,pR,r as floats)"); return; }
+    setFaceCustom(s); Serial.println("OK");
+}
+static void cmdSetFaceL(const String &val) {
+    FaceShape s;
+    if (!parseFaceShape(val, s)) { Serial.println("ERR: bad face_l (need topH,botH,tilt,pR,r as floats)"); return; }
+    setFaceLeft(s); Serial.println("OK");
+}
+static void cmdSetFaceR(const String &val) {
+    FaceShape s;
+    if (!parseFaceShape(val, s)) { Serial.println("ERR: bad face_r (need topH,botH,tilt,pR,r as floats)"); return; }
+    setFaceRight(s); Serial.println("OK");
+}
+
+static void cmdSetLook(const String &val) {
+    int x, y;
+    if (sscanf(val.c_str(), "%d,%d", &x, &y) != 2) { Serial.println("ERR: bad look (need x,y)"); return; }
+    setLookAt((int16_t)x, (int16_t)y); Serial.println("OK");
+}
+static void cmdSetHud(const String &val) {
+    bool b;
+    if (!parseBool(val, b)) { Serial.println("ERR: bad bool"); return; }
+    config.hudOn = b; setHud(b); saveConfig(); Serial.println("OK");
+}
+static void cmdBlink()    { triggerBlink(); Serial.println("OK"); }
+static void cmdGetLook()  { int16_t x, y; getLookAt(x, y); Serial.printf("look:           %d,%d\n", x, y); }
+static void cmdGetHud()   { Serial.printf("hud:            %s\n", config.hudOn ? "on" : "off"); }
+static void cmdGetFace() {
+    FaceShape l, r; getFaceLeft(l); getFaceRight(r);
+    Serial.printf("face:           L=%g,%g,%g,%g,%g R=%g,%g,%g,%g,%g\n",
+                  l.topH, l.botH, l.tilt, l.pR, l.radius,
+                  r.topH, r.botH, r.tilt, r.pR, r.radius);
+}
+static void cmdGetFaceL() {
+    FaceShape s; getFaceLeft(s);
+    Serial.printf("face_l:         %g,%g,%g,%g,%g\n", s.topH, s.botH, s.tilt, s.pR, s.radius);
+}
+static void cmdGetFaceR() {
+    FaceShape s; getFaceRight(s);
+    Serial.printf("face_r:         %g,%g,%g,%g,%g\n", s.topH, s.botH, s.tilt, s.pR, s.radius);
+}
+
 // ============ Getter handlers ============
 static void cmdGetTouchDebug() { Serial.printf("touch_debug:    %s\n", config.touchDebug    ? "on" : "off"); }
 static void cmdGetMoodCycle()  { Serial.printf("mood_cycle:     %s\n", config.moodAutoCycle ? "on" : "off"); }
@@ -155,7 +210,7 @@ static void cmdGetTouchDots()  { Serial.printf("touch_dots:     %s\n", config.sh
 static void cmdGetEyeColour()  { Serial.printf("eye_colour:     %06X\n", (unsigned)rgb565_to_888(config.eyeColour)); }
 static void cmdGetBgColour()   { Serial.printf("bg_colour:      %06X\n", (unsigned)rgb565_to_888(config.bgColour)); }
 static void cmdGetMood()       { Serial.printf("mood:           %s\n", config.mood); }
-static void cmdGetBright()     { Serial.printf("bright:         %u\n", config.brightness); }
+static void cmdGetBright()     { Serial.printf("bright:         %u%%\n", config.brightness); }
 static void cmdGetVersion()    { Serial.printf("version:        %s\n", FW_VERSION); }
 
 // ============ Action handlers (no value, no get/set distinction) ============
@@ -172,6 +227,8 @@ static void cmdMem()    { printMemoryReport(); }
 static void cmdUptime() { printUptime(); }
 static void cmdLdr()    { printLdr(); }
 static void cmdClear()  { tft.fillScreen(config.bgColour); Serial.println("OK"); }
+static void cmdGetLight() { Serial.printf("light: %u\n", getLdrBrightnessPct()); }
+static void cmdGetLux()   { Serial.printf("lux: %u\n",   getLdrLuxish()); }
 static void cmdSplash() { showSplash(); Serial.println("OK"); }
 
 // Forward decls for cmds that iterate the table
@@ -196,11 +253,17 @@ static const Command commands[] = {
     {"bg_colour",    cmdSetBgColour,    cmdGetBgColour,    "RRGGBB hex"},
     {"bg_color",     cmdSetBgColour,    cmdGetBgColour,    nullptr},   // alias, hidden
     {"mood",         cmdSetMood,        cmdGetMood,        "NEUTRAL|HAPPY|ANGRY|SAD|EXCITED|ANNOYED|QUESTIONING|IDLE1-3"},
-    {"bright",       cmdSetBright,      cmdGetBright,      "0-255 backlight PWM"},
-
+    {"bright",       cmdSetBright,      cmdGetBright,      "0-100 backlight %"},
+    {"look",   cmdSetLook,  cmdGetLook,  "x,y canvas offset"},
+    {"hud",    cmdSetHud,   cmdGetHud,   "on|off Grobot HUD overlay"},
+    {"face",   cmdSetFace,  cmdGetFace,  "topH,botH,tilt,pR,r — symmetric custom mood (floats)"},
+    {"face_l", cmdSetFaceL, cmdGetFaceL, "topH,botH,tilt,pR,r — left eye only"},
+    {"face_r", cmdSetFaceR, cmdGetFaceR, "topH,botH,tilt,pR,r — right eye only"},
+    
     // Set-only commands
     {"led",          cmdSetLed,         nullptr,           "off|on|red|green|blue|white|yellow|cyan|magenta or r,g,b"},
     {"tap",          cmdSetTap,         nullptr,           "x,y[,z] inject touch"},
+    {"blink",  nullptr,     cmdBlink,    "trigger one blink"},
 
     // Plain actions (and queries with no setter)
     {"help",         nullptr,           cmdHelp,           "this message"},
@@ -209,6 +272,8 @@ static const Command commands[] = {
     {"mem",          nullptr,           cmdMem,            "memory snapshot"},
     {"uptime",       nullptr,           cmdUptime,         "time since boot"},
     {"ldr",          nullptr,           cmdLdr,            "light sensor reading"},
+    {"light",        nullptr,           cmdGetLight,       "ambient brightness 0-100%"},
+    {"lux",          nullptr,           cmdGetLux,         "inverted ldr (higher=brighter)"},
     {"clear",        nullptr,           cmdClear,          "fill screen with bg colour"},
     {"splash",       nullptr,           cmdSplash,         "re-show RSC splash"},
     {"reboot",       nullptr,           cmdReboot,         "soft reboot (config preserved)"},

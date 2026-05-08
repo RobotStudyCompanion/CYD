@@ -8,6 +8,8 @@
 #include "DisplayInit.h"
 
 static const int BL_PIN = 21;
+static const int BL_LEDC_CHANNEL = 0;
+
 TFT_eSPI tft = TFT_eSPI();
 
 void initDisplay()
@@ -17,14 +19,16 @@ void initDisplay()
     tft.fillScreen(TFT_BLACK);
     
     ledcSetup(0, 5000, 8);              // channel 0, 5 kHz, 8-bit
-    ledcAttachPin(BL_PIN, 0);
+    ledcAttachPin(BL_PIN, BL_LEDC_CHANNEL);
     setBacklight(config.brightness);
 
     initFaceRenderer(&tft);
     showSplash();
 }
 
-void setBacklight(uint8_t duty) {
-    config.brightness = duty;
-    ledcWrite(0, duty);                 // channel 0 (was: ledcWrite(BL_PIN, duty))
+void setBacklight(uint8_t pct) {
+    if (pct > 100) pct = 100;
+    uint8_t duty = (pct * 255) / 100;
+    ledcWrite(BL_LEDC_CHANNEL, duty);
+    config.brightness = pct;
 }
