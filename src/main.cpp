@@ -2,7 +2,7 @@
 #include "FaceRenderer.h"
 #include "LED_Solution.h"
 #include "TouchHandler.h"
-#include "AnimationPlayer.h"
+#include "DisplayInit.h"
 #include "DebugOverlay.h"
 #include "Config.h"
 
@@ -29,7 +29,7 @@ void setup() {
     Serial.println(" KB");
     Serial.println("==============");
     initConfig(); //must come before initAnimationPlayer
-    initAnimationPlayer();
+    initDisplay();
     initTouch();
     setupLed();
     
