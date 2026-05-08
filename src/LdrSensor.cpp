@@ -10,8 +10,8 @@ static constexpr uint16_t LDR_DARK_REF = 1000;   // observed dark ceiling — tu
 
 // Hysteresis thresholds for auto-brightness state machine (used by next step).
 // Trip when raw rises above _ENTER (room got dim), clear when it drops below _EXIT.
-static constexpr uint16_t LDR_DARK_ENTER = 700;
-static constexpr uint16_t LDR_DARK_EXIT  = 400;
+static constexpr uint16_t LDR_DARK_ENTER = 500;
+static constexpr uint16_t LDR_DARK_EXIT  = 300;
 
 static bool     _isDark          = false;
 static bool     _initialised     = false;
@@ -57,10 +57,20 @@ void serviceLdr() {
     if (elapsed < 100) return;   // cap at ~10 Hz to keep ADC overhead low
     _lastTick = now;
 
-    // Hysteresis state machine using existing thresholds
     uint16_t raw = getLdrRaw();
-    if (!_isDark && raw > LDR_DARK_ENTER) _isDark = true;
-    else if (_isDark && raw < LDR_DARK_EXIT) _isDark = false;
+    #ifdef LDR_DEBUG
+        bool wasDark = _isDark;
+    #endif
+        if (!_isDark && raw > LDR_DARK_ENTER) _isDark = true;
+        else if (_isDark && raw < LDR_DARK_EXIT) _isDark = false;
+
+    #ifdef LDR_DEBUG
+        if (_isDark != wasDark) {
+            Serial.printf("[ldr] *** %s -> %s (raw=%u)\n",
+                        wasDark ? "DARK" : "light",
+                        _isDark ? "DARK" : "light", raw);
+        }
+    #endif
 
     uint8_t target = _isDark ? config.brightDark : config.brightLight;
 
@@ -69,11 +79,21 @@ void serviceLdr() {
     float rate = 2.0f;   // tune for snappier/softer transitions
     _currentEffective += ((float)target - _currentEffective) * dt * rate;
 
+    uint8_t newPct = (uint8_t)(_currentEffective + 0.5f);
+
+    #ifdef LDR_DEBUG
+        static uint32_t _lastLog = 0;
+        if (now - _lastLog > 1000) {
+            _lastLog = now;
+            Serial.printf("[ldr] raw=%u %s target=%u eff=%u\n",
+                        raw, _isDark ? "DARK" : "light", target, newPct);
+        }
+    #endif
+
     // Only call setBacklight when the integer value actually changes (avoid PWM thrash)
-    uint8_t newPwm = (uint8_t)(_currentEffective + 0.5f);
-    static uint8_t lastApplied = 255;
-    if (newPwm != lastApplied) {
-        setBacklight(newPwm);
-        lastApplied = newPwm;
+    static uint8_t lastAppliedPct = 100;
+    if (newPct != lastAppliedPct) {
+        setBacklight(newPct);
+        lastAppliedPct = newPct;
     }
 }

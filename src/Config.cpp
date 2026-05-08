@@ -134,7 +134,7 @@ static void cmdSetMood(const String &val) {
 }
 static void cmdSetBright(const String &val) {
     int v = val.toInt();
-    if (v < 0 || v > 100) { Serial.println("ERR: bright 0-100"); return; }
+    if (v < 1 || v > 100) { Serial.println("ERR: 1-100"); return; }
     config.autoBright = false;
     setBacklight((uint8_t)v); saveConfig(); Serial.println("OK");
 }
@@ -286,13 +286,13 @@ static const Command commands[] = {
     {"mood",         cmdSetMood,        cmdGetMood,        "NEUTRAL|HAPPY|ANGRY|SAD|EXCITED|ANNOYED|QUESTIONING|IDLE1-3"},
     {"bright",       cmdSetBright,      cmdGetBright,      "0-100 backlight %"},
     {"auto_bright",  cmdSetAutoBright,  cmdGetAutoBright,  "on|off LDR-driven brightness"},
-    {"bright_light", cmdSetBrightLight, cmdGetBrightLight, "0-100 target % when bright"},
-    {"bright_dark",  cmdSetBrightDark,  cmdGetBrightDark,  "0-100 target % when dark"},
-    {"look",         cmdSetLook,        cmdGetLook,         "x,y canvas offset"},
-    {"hud",          cmdSetHud,         cmdGetHud,          "on|off Grobot HUD overlay"},
-    {"face",         cmdSetFace,        cmdGetFace,         "topH,botH,tilt,pR,r — symmetric custom mood (floats)"},
-    {"face_l",       cmdSetFaceL,       cmdGetFaceL,        "topH,botH,tilt,pR,r — left eye only"},
-    {"face_r",       cmdSetFaceR,       cmdGetFaceR,        "topH,botH,tilt,pR,r — right eye only"},
+    {"bright_light", cmdSetBrightLight, cmdGetBrightLight, "1-100 target % when bright"},
+    {"bright_dark",  cmdSetBrightDark,  cmdGetBrightDark,  "1-100 target % when dark"},
+    {"look",         cmdSetLook,        cmdGetLook,        "x,y canvas offset"},
+    {"hud",          cmdSetHud,         cmdGetHud,         "on|off Grobot HUD overlay"},
+    {"face",         cmdSetFace,        cmdGetFace,        "topH,botH,tilt,pR,r — symmetric custom mood (floats)"},
+    {"face_l",       cmdSetFaceL,       cmdGetFaceL,       "topH,botH,tilt,pR,r — left eye only"},
+    {"face_r",       cmdSetFaceR,       cmdGetFaceR,       "topH,botH,tilt,pR,r — right eye only"},
     
     // Set-only commands
     {"led",          cmdSetLed,         nullptr,           "off|on|red|green|blue|white|yellow|cyan|magenta or r,g,b"},
