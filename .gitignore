@@ -1,4 +1,4 @@
 .pio
 .vscode
-
+include/version.h
 /net-commander
