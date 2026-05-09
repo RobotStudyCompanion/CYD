@@ -7,13 +7,33 @@
 #include <Preferences.h>
 #include <TFT_eSPI.h>
 #include "LdrSensor.h"
-
+#include "UIManager.h"
+#include "MenuSchema.h"
 
 extern TFT_eSPI tft;
 
 Config config;
 static Preferences prefs;
 static const char *NVS_NS = "rsc";
+static bool     _nvsDirty = false;
+static uint32_t _nvsLastChange = 0;
+static const uint32_t NVS_DEBOUNCE_MS = 5000;
+static void saveConfig();
+
+void markDirty() {
+    _nvsDirty = true;
+    _nvsLastChange = millis();
+}
+void serviceNvs() {
+    if (_nvsDirty && (millis() - _nvsLastChange) > NVS_DEBOUNCE_MS) {
+        saveConfig();
+        _nvsDirty = false;
+        // Serial.println("NVS: flushed");
+    }
+}
+static void flushNvs() {   // for forced flush before reboot
+    if (_nvsDirty) { saveConfig(); _nvsDirty = false; }
+}
 
 // ============ Conversion helpers ============
 static uint16_t rgb888_to_565(uint32_t c) {
@@ -33,17 +53,18 @@ static uint32_t rgb565_to_888(uint16_t c) {
 // ============ NVS load/save ============
 static void saveConfig() {
     prefs.begin(NVS_NS, false);
-    prefs.putBool("touchDebug", config.touchDebug);
-    prefs.putBool("moodCycle",  config.moodAutoCycle);
-    prefs.putBool("showDots",   config.showTouchDots);
-    prefs.putUShort("eyeCol",   config.eyeColour);
-    prefs.putUShort("bgCol",    config.bgColour);
-    prefs.putString("mood",     config.mood);
-    prefs.putUChar("bright",    config.brightness);
-    prefs.putBool ("autoBright", config.autoBright);
-    prefs.putUChar("brLight",    config.brightLight);
-    prefs.putUChar("brDark",     config.brightDark);
-    prefs.putBool("hudOn",      config.hudOn);
+    prefs.putBool("touchDebug",     config.touchDebug);
+    prefs.putBool("moodCycle",      config.moodAutoCycle);
+    prefs.putBool("showDots",       config.showTouchDots);
+    prefs.putUShort("eyeCol",       config.eyeColour);
+    prefs.putUShort("bgCol",        config.bgColour);
+    prefs.putString("mood",         config.mood);
+    prefs.putUChar("bright",        config.brightness);
+    prefs.putBool ("autoBright",    config.autoBright);
+    prefs.putUChar("brLight",       config.brightLight);
+    prefs.putUChar("brDark",        config.brightDark);
+    prefs.putBool("hudOn",          config.hudOn);
+    prefs.putBool("idleAnim",       config.idleAnim);
     prefs.end();
 }
 
@@ -61,6 +82,7 @@ void initConfig() {
     config.autoBright  = prefs.getBool ("autoBright", config.autoBright);
     config.brightLight = prefs.getUChar("brLight",    config.brightLight);
     config.brightDark  = prefs.getUChar("brDark",     config.brightDark);
+    config.idleAnim = prefs.getBool("idleAnim",       config.idleAnim);
     String savedMood     = prefs.getString("mood",     String(config.mood));
     strncpy(config.mood, savedMood.c_str(), sizeof(config.mood) - 1);
     config.mood[sizeof(config.mood) - 1] = '\0';
@@ -105,55 +127,69 @@ static bool isKnownMood(const String &m) {
 static void cmdSetTouchDebug(const String &val) {
     bool b;
     if (!parseBool(val, b)) { Serial.println("ERR: bad bool"); return; }
-    config.touchDebug = b; saveConfig(); Serial.println("OK");
+    config.touchDebug = b; markDirty(); Serial.println("OK");
 }
 static void cmdSetMoodCycle(const String &val) {
     bool b;
     if (!parseBool(val, b)) { Serial.println("ERR: bad bool"); return; }
-    config.moodAutoCycle = b; saveConfig(); Serial.println("OK");
+    config.moodAutoCycle = b; markDirty(); Serial.println("OK");
+}
+static void cmdSetIdleAnim(const String& val) {
+    bool b;
+    if (!parseBool(val, b)) { Serial.println("ERR: bad bool"); return; }
+    config.idleAnim = b; markDirty(); Serial.println("OK");   // markDirty defined in step 3
+}
+static void cmdGetIdleAnim() {
+    Serial.printf("idle_anim:      %s\n", config.idleAnim ? "on" : "off");
 }
 static void cmdSetTouchDots(const String &val) {
     bool b;
     if (!parseBool(val, b)) { Serial.println("ERR: bad bool"); return; }
-    config.showTouchDots = b; saveConfig(); Serial.println("OK");
+    config.showTouchDots = b; markDirty(); Serial.println("OK");
 }
 static void cmdSetEyeColour(const String &val) {
     uint16_t c;
     if (!parseColour(val, c)) { Serial.println("ERR: bad colour (need 6 hex digits)"); return; }
-    setEyeColour(c); saveConfig(); Serial.println("OK");
+    setEyeColour(c); markDirty(); Serial.println("OK");
 }
 static void cmdSetBgColour(const String &val) {
     uint16_t c;
     if (!parseColour(val, c)) { Serial.println("ERR: bad colour"); return; }
-    setBackgroundColour(c); saveConfig(); Serial.println("OK");
+    setBackgroundColour(c); markDirty(); Serial.println("OK");
 }
 static void cmdSetMood(const String &val) {
     String upper = val; upper.toUpperCase();
     if (!isKnownMood(upper)) { Serial.printf("ERR: unknown mood '%s'\n", val.c_str()); return; }
-    setMood(upper.c_str()); saveConfig(); Serial.println("OK");
+    setMood(upper.c_str()); markDirty(); Serial.println("OK");
 }
 static void cmdSetBright(const String &val) {
     int v = val.toInt();
     if (v < 1 || v > 100) { Serial.println("ERR: 1-100"); return; }
     config.autoBright = false;
-    setBacklight((uint8_t)v); saveConfig(); Serial.println("OK");
+    setBacklight((uint8_t)v); markDirty(); Serial.println("OK");
 }
 
 static void cmdSetAutoBright(const String &val) {
     bool b;
     if (!parseBool(val, b)) { Serial.println("ERR: bad bool"); return; }
-    config.autoBright = b; saveConfig();
+    config.autoBright = b; markDirty();
     Serial.println(b ? "OK: auto on" : "OK: auto off");
 }
 static void cmdSetBrightLight(const String &val) {
     int v = val.toInt();
     if (v < 0 || v > 100) { Serial.println("ERR: 0-100"); return; }
-    config.brightLight = (uint8_t)v; saveConfig(); Serial.println("OK");
+    config.brightLight = (uint8_t)v; markDirty(); Serial.println("OK");
 }
 static void cmdSetBrightDark(const String &val) {
     int v = val.toInt();
     if (v < 0 || v > 100) { Serial.println("ERR: 0-100"); return; }
-    config.brightDark = (uint8_t)v; saveConfig(); Serial.println("OK");
+    config.brightDark = (uint8_t)v; markDirty(); Serial.println("OK");
+}
+static void cmdSetMode(const String& val) {
+    String u = val; u.toUpperCase();
+    if (u == "FACE")      { setUIMode(MODE_FACE); Serial.println("OK"); }
+    else if (u == "MENU") { setUIMode(MODE_MENU); Serial.println("OK"); }
+    else                  { Serial.println("ERR: FACE|MENU"); }
 }
 
 static void cmdSetLed(const String &val) {
@@ -210,7 +246,7 @@ static void cmdSetLook(const String &val) {
 static void cmdSetHud(const String &val) {
     bool b;
     if (!parseBool(val, b)) { Serial.println("ERR: bad bool"); return; }
-    config.hudOn = b; setHud(b); saveConfig(); Serial.println("OK");
+    config.hudOn = b; setHud(b); markDirty(); Serial.println("OK");
 }
 static void cmdBlink()    { triggerBlink(); Serial.println("OK"); }
 static void cmdGetLook()  { int16_t x, y; getLookAt(x, y); Serial.printf("look:           %d,%d\n", x, y); }
@@ -229,6 +265,41 @@ static void cmdGetFaceR() {
     FaceShape s; getFaceRight(s);
     Serial.printf("face_r:         %g,%g,%g,%g,%g\n", s.topH, s.botH, s.tilt, s.pR, s.radius);
 }
+static void cmdGetMode()       { printMode(); }
+
+static void cmdMenuSelect(const String& val) {
+    if (!menuSelect((uint8_t)val.toInt())) Serial.println("ERR: select failed");
+}
+static void cmdMenuBack()      { menuBack(); Serial.println("OK"); }
+static void cmdMenuState()     { printMenuState(); }
+
+static void cmdMenuBegin() {
+    runtimeBegin();
+    Serial.println("OK: schema load started");
+}
+static void cmdMenuScreen(const String& val) {
+    if (runtimeAddScreen(val.c_str())) Serial.println("OK");
+    else Serial.println("ERR: addScreen failed");
+}
+static void cmdMenuItem(const String& val) {
+    int c1 = val.indexOf(',');
+    if (c1 < 0) { Serial.println("ERR: need kind,label[,payload]"); return; }
+    int c2 = val.indexOf(',', c1 + 1);
+    String kindStr = val.substring(0, c1); kindStr.toLowerCase();
+    String label   = (c2 < 0) ? val.substring(c1 + 1) : val.substring(c1 + 1, c2);
+    String payload = (c2 < 0) ? String()              : val.substring(c2 + 1);
+    ActionKind k;
+    if      (kindStr == "push")   k = ACT_PUSH;
+    else if (kindStr == "invoke") k = ACT_INVOKE;
+    else if (kindStr == "back")   k = ACT_BACK;
+    else { Serial.println("ERR: kind must be push|invoke|back"); return; }
+    if (runtimeAddItem(k, label.c_str(), payload.c_str())) Serial.println("OK");
+    else Serial.println("ERR: addItem failed");
+}
+static void cmdMenuEnd() {
+    if (runtimeEnd()) Serial.println("OK: schema active");
+    else Serial.println("ERR: runtimeEnd failed (bad PUSH index?)");
+}
 
 // ============ Getter handlers ============
 static void cmdGetTouchDebug() { Serial.printf("touch_debug:    %s\n", config.touchDebug    ? "on" : "off"); }
@@ -241,7 +312,6 @@ static void cmdGetBright()     { Serial.printf("bright:         %u%%\n", config.
 static void cmdGetAutoBright() { Serial.printf("auto_bright:    %s\n", config.autoBright ? "on" : "off"); }
 static void cmdGetBrightLight(){ Serial.printf("bright_light:   %u%%\n", config.brightLight); }
 static void cmdGetBrightDark() { Serial.printf("bright_dark:    %u%%\n", config.brightDark); }
-
 static void cmdGetVersion()    { Serial.printf("version:        %s\n", FW_VERSION); }
 
 // ============ Action handlers (no value, no get/set distinction) ============
@@ -252,6 +322,7 @@ static void cmdReset() {
 }
 static void cmdReboot() {
     Serial.println("OK: rebooting in 1 second...");
+    flushNvs();
     delay(1000); ESP.restart();
 }
 static void cmdMem()        { printMemoryReport(); }
@@ -269,12 +340,12 @@ static void cmdHelp();
 static void cmdStatus();
 
 // ============ The dispatch table ============
-struct Command {
-    const char *name;
-    void (*set)(const String &val);   // nullptr if not settable
-    void (*get)();                    // nullptr if not gettable; also serves plain commands
-    const char *help;                 // nullptr to hide from help (aliases)
-};
+// struct Command {
+//     const char *name;
+//     void (*set)(const String &val);   // nullptr if not settable
+//     void (*get)();                    // nullptr if not gettable; also serves plain commands
+//     const char *help;                 // nullptr to hide from help (aliases)
+// };
 
 static const Command commands[] = {
     // Settable + gettable config (appear in 'status')
@@ -285,6 +356,7 @@ static const Command commands[] = {
     {"eye_color",    cmdSetEyeColour,   cmdGetEyeColour,   nullptr},   // alias, hidden
     {"bg_colour",    cmdSetBgColour,    cmdGetBgColour,    "RRGGBB hex"},
     {"bg_color",     cmdSetBgColour,    cmdGetBgColour,    nullptr},   // alias, hidden
+    {"idle_anim",    cmdSetIdleAnim,    cmdGetIdleAnim,    "on|off random idle moods"},
     {"mood",         cmdSetMood,        cmdGetMood,        "NEUTRAL|HAPPY|ANGRY|SAD|EXCITED|ANNOYED|QUESTIONING|IDLE1-3"},
     {"bright",       cmdSetBright,      cmdGetBright,      "0-100 backlight %"},
     {"auto_bright",  cmdSetAutoBright,  cmdGetAutoBright,  "on|off LDR-driven brightness"},
@@ -295,12 +367,21 @@ static const Command commands[] = {
     {"face",         cmdSetFace,        cmdGetFace,        "topH,botH,tilt,pR,r — symmetric custom mood (floats)"},
     {"face_l",       cmdSetFaceL,       cmdGetFaceL,       "topH,botH,tilt,pR,r — left eye only"},
     {"face_r",       cmdSetFaceR,       cmdGetFaceR,       "topH,botH,tilt,pR,r — right eye only"},
-    
+    {"mode",         cmdSetMode,        cmdGetMode,        "FACE|MENU"},
+    {"menu_begin",   nullptr,           cmdMenuBegin,      "start runtime schema load"},
+    {"menu_screen",  cmdMenuScreen,     nullptr,           "title  add screen"},
+    {"menu_item",    cmdMenuItem,       nullptr,           "kind,label,payload  add item"},
+    {"menu_end",     nullptr,           cmdMenuEnd,        "finalise + activate runtime schema"},
+
     // Set-only commands
     {"led",          cmdSetLed,         nullptr,           "off|on|red|green|blue|white|yellow|cyan|magenta or r,g,b"},
     {"tap",          cmdSetTap,         nullptr,           "x,y[,z] inject touch"},
+    {"menu_select",  cmdMenuSelect,     nullptr,           "n  select item by index"},
+
 
     // Plain actions (and queries with no setter)
+    {"menu_back",    nullptr,           cmdMenuBack,       "pop one level"},
+    {"menu",         nullptr,           cmdMenuState,      "current menu state"},
     {"help",         nullptr,           cmdHelp,           "this message"},
     {"status",       nullptr,           cmdStatus,         "print current config"},
     {"version",      nullptr,           cmdGetVersion,     "firmware version"},
@@ -320,7 +401,7 @@ static const Command commands[] = {
 
 static const size_t COMMAND_COUNT = sizeof(commands) / sizeof(commands[0]);
 
-static const Command *findCommand(const String &name) {
+const Command *findCommand(const String &name) {
     for (size_t i = 0; i < COMMAND_COUNT; i++) {
         if (name == commands[i].name) return &commands[i];
     }
