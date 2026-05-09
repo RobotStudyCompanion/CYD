@@ -58,7 +58,7 @@ static void renderDots() {
 void serviceDebugOverlay() {
     static bool wasDown = false;
     uint16_t x, y, z;
-    bool isDown = getTouchPoint(x, y, z);
+    bool isDown = peekLastTouch(x, y, z);
 
     if (isDown && !wasDown) {
         Serial.printf("Touch at (%d, %d) z=%d\n", x, y, z);
