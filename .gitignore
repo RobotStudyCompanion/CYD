@@ -2,3 +2,5 @@
 .vscode
 include/version.h
 /net-commander
+docs
+data

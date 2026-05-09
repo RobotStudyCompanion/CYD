@@ -1,7 +1,9 @@
 #include "FaceRenderer.h"
 #include <Grobot_Animations.h>
 #include "Config.h"
+#include <esp_system.h>   // for esp_random()
 
+static uint32_t _nextIdleSwitch = 0;
 // ----- Sprite + Grobot state -----
 static TFT_eSPI    *_tft     = nullptr;
 static TFT_eSprite *_canvas  = nullptr;
@@ -55,11 +57,22 @@ void showSplash()
 void serviceFaceRenderer()
 {
     if (!_tft || !_canvas || !_eyes) return;
-
     if (_splashUntil != 0) {
         if (millis() < _splashUntil) return;     // still showing splash, skip render
         _tft->fillScreen(config.bgColour);       // splash done, clear before face takes over
         _splashUntil = 0;
+    }
+    if (config.idleAnim && !config.moodAutoCycle) {
+    uint32_t now = millis();
+    if (_nextIdleSwitch == 0) {
+        _nextIdleSwitch = now + 5000 + (esp_random() % 10000);
+    } else if (now >= _nextIdleSwitch) {
+        static const char* idles[] = {"IDLE1", "IDLE2", "IDLE3"};
+        setMood(idles[esp_random() % 3]);
+        _nextIdleSwitch = now + 5000 + (esp_random() % 10000);
+    }
+    } else {
+        _nextIdleSwitch = 0;
     }
     if (_paused) return;   // <-- new
     if (config.moodAutoCycle) _eyes->moodSwitch(true);
@@ -123,3 +136,4 @@ void getFaceRight(FaceShape &out) { out = _customR; }
 void pauseFace()    { _paused = true; }
 void resumeFace()   { _paused = false; }
 bool isFacePaused() { return _paused; }
+void resetFaceState() { rebuildEyes(); }

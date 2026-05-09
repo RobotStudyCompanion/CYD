@@ -6,6 +6,7 @@
 #include "DebugOverlay.h"
 #include "LdrSensor.h"
 #include "Config.h"
+#include "UIManager.h"
 
 void setup() {
     Serial.begin(115200);
@@ -15,13 +16,16 @@ void setup() {
     initConfig(); //must come before initDisplay so persisted config applies
     initDisplay();
     initTouch();
+    initUI();
     setupLed();
     Serial.println("RSC ready");
 }
 
 void loop() {
     serviceConfig();
-    serviceFaceRenderer();
+    serviceNvs();
+    if (getUIMode() == MODE_FACE) serviceFaceRenderer();
+    serviceUI();
     serviceDebugOverlay();
     serviceLdr();
 }

@@ -27,3 +27,4 @@ void getFaceRight (FaceShape &out);
 void pauseFace();
 void resumeFace();
 bool isFacePaused();
+void resetFaceState();
