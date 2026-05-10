@@ -31,6 +31,7 @@ static MenuItem* rtItemsFor(int screenIdx) {
 extern const MenuScreen ROOT_MENU;
 extern const MenuScreen MOOD_MENU;
 extern const MenuScreen BRIGHTNESS_MENU;
+extern const MenuScreen STATUS_MENU;
 
 static const MenuItem BRIGHTNESS_ITEMS[] = {
     {"25%",  ACT_INVOKE, "bright:25"},
@@ -50,13 +51,23 @@ static const MenuItem MOOD_ITEMS[] = {
 };
 const MenuScreen MOOD_MENU = {"Mood", MOOD_ITEMS, 5};
 
+static const MenuItem STATUS_ITEMS[] = {
+    {"Bright", ACT_NONE, nullptr, "bright"},
+    {"Mood",   ACT_NONE, nullptr, "mood"},
+    {"Up",     ACT_NONE, nullptr, "uptime"},
+    {"Mem",    ACT_NONE, nullptr, "mem"},
+    {"Back",   ACT_BACK, nullptr},
+};
+const MenuScreen STATUS_MENU = {"Status", STATUS_ITEMS, 5};
+
 static const MenuItem ROOT_ITEMS[] = {
-    {"Brightness", ACT_PUSH,   &BRIGHTNESS_MENU},
-    {"Mood",       ACT_PUSH,   &MOOD_MENU},
+    {"Brightness", ACT_PUSH,   &BRIGHTNESS_MENU, "bright"},
+    {"Mood",       ACT_PUSH,   &MOOD_MENU,       "mood"},
+    {"Status",     ACT_PUSH,   &STATUS_MENU,     nullptr},
     {"Blink",      ACT_INVOKE, "blink"},
     {"Resume",     ACT_BACK,   nullptr},
 };
-const MenuScreen ROOT_MENU = {"Menu", ROOT_ITEMS, 4};
+const MenuScreen ROOT_MENU = {"Menu", ROOT_ITEMS, 5};
 
 
 void resetRuntimeSchema() {
@@ -75,7 +86,7 @@ bool runtimeAddScreen(const char* title) {
     return true;
 }
 
-bool runtimeAddItem(ActionKind kind, const char* label, const char* payload) {
+bool runtimeAddItem(ActionKind kind, const char* label, const char* payload, const char* formatCmd) {
     if (!_rtLoading || _rtCurScreen < 0) return false;
     MenuScreen& s = _rtScreens[_rtCurScreen];
     if (s.count >= MAX_RT_ITEMS) return false;
@@ -92,6 +103,13 @@ bool runtimeAddItem(ActionKind kind, const char* label, const char* payload) {
         it.payload = p;
     } else {
         it.payload = nullptr;
+    }
+    if (formatCmd && *formatCmd) {
+        const char* f = poolString(formatCmd);
+        if (!f) return false;
+        it.formatCmd = f;
+    } else {
+        it.formatCmd = nullptr;
     }
     return true;
 }

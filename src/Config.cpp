@@ -283,17 +283,24 @@ static void cmdMenuScreen(const String& val) {
 }
 static void cmdMenuItem(const String& val) {
     int c1 = val.indexOf(',');
-    if (c1 < 0) { Serial.println("ERR: need kind,label[,payload]"); return; }
+    if (c1 < 0) { Serial.println("ERR: need kind,label[,payload[,formatCmd]]"); return; }
     int c2 = val.indexOf(',', c1 + 1);
+    int c3 = (c2 < 0) ? -1 : val.indexOf(',', c2 + 1);
     String kindStr = val.substring(0, c1); kindStr.toLowerCase();
-    String label   = (c2 < 0) ? val.substring(c1 + 1) : val.substring(c1 + 1, c2);
-    String payload = (c2 < 0) ? String()              : val.substring(c2 + 1);
+    String label   = (c2 < 0) ? val.substring(c1 + 1)
+                              : val.substring(c1 + 1, c2);
+    String payload = (c2 < 0) ? String()
+                   : (c3 < 0) ? val.substring(c2 + 1)
+                              : val.substring(c2 + 1, c3);
+    String fmt     = (c3 < 0) ? String() : val.substring(c3 + 1);
     ActionKind k;
     if      (kindStr == "push")   k = ACT_PUSH;
     else if (kindStr == "invoke") k = ACT_INVOKE;
     else if (kindStr == "back")   k = ACT_BACK;
-    else { Serial.println("ERR: kind must be push|invoke|back"); return; }
-    if (runtimeAddItem(k, label.c_str(), payload.c_str())) Serial.println("OK");
+    else if (kindStr == "none")   k = ACT_NONE;
+    else { Serial.println("ERR: kind must be push|invoke|back|none"); return; }
+    const char* fmtPtr = fmt.length() ? fmt.c_str() : nullptr;
+    if (runtimeAddItem(k, label.c_str(), payload.c_str(), fmtPtr)) Serial.println("OK");
     else Serial.println("ERR: addItem failed");
 }
 static void cmdMenuEnd() {
@@ -313,6 +320,15 @@ static void cmdGetAutoBright() { Serial.printf("auto_bright:    %s\n", config.au
 static void cmdGetBrightLight(){ Serial.printf("bright_light:   %u%%\n", config.brightLight); }
 static void cmdGetBrightDark() { Serial.printf("bright_dark:    %u%%\n", config.brightDark); }
 static void cmdGetVersion()    { Serial.printf("version:        %s\n", FW_VERSION); }
+static String fmtBright() { return String(config.brightness) + "%"; }
+static String fmtMood()   { return String(config.mood); }
+static String fmtUptime() {
+    uint32_t s = millis() / 1000;
+    char buf[16];
+    snprintf(buf, sizeof(buf), "%um %us", s / 60, s % 60);
+    return String(buf);
+}
+static String fmtMem() { return String(ESP.getFreeHeap() / 1024) + "K"; }
 
 // ============ Action handlers (no value, no get/set distinction) ============
 static void cmdReset() {
@@ -370,7 +386,7 @@ static const Command commands[] = {
     {"mode",         cmdSetMode,        cmdGetMode,        "FACE|MENU"},
     {"menu_begin",   nullptr,           cmdMenuBegin,      "start runtime schema load"},
     {"menu_screen",  cmdMenuScreen,     nullptr,           "title  add screen"},
-    {"menu_item",    cmdMenuItem,       nullptr,           "kind,label,payload  add item"},
+    {"menu_item",    cmdMenuItem,       nullptr,           "kind,label,payload[,formatCmd]  kind=push|invoke|back|none"},    
     {"menu_end",     nullptr,           cmdMenuEnd,        "finalise + activate runtime schema"},
 
     // Set-only commands
@@ -397,6 +413,10 @@ static const Command commands[] = {
     {"resume",       nullptr,           cmdResume,         "resume face renderer"},
     {"reboot",       nullptr,           cmdReboot,         "soft reboot (config preserved)"},
     {"reset",        nullptr,           cmdReset,          "clear NVS, reboot to defaults"},
+    {"mood",         cmdSetMood,        cmdGetMood,        "NEUTRAL|HAPPY|ANGRY|SAD|EXCITED|ANNOYED|QUESTIONING|IDLE1-3",       fmtMood},
+    {"bright",       cmdSetBright,      cmdGetBright,      "0-100 backlight %",                                                 fmtBright},
+    {"uptime",       nullptr,           cmdUptime,         "time since boot",                                                   fmtUptime},
+    {"mem",          nullptr,           cmdMem,            "memory snapshot",                                                   fmtMem},
 };
 
 static const size_t COMMAND_COUNT = sizeof(commands) / sizeof(commands[0]);

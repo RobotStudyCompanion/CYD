@@ -14,6 +14,7 @@ struct Config {
     uint8_t  brightLight = 50;   // target % in bright rooms
     uint8_t  brightDark  = 1;    // target % in dark rooms
     bool idleAnim = false;
+    String (*format)();   // optional: short live-value string for menus, e.g. "75%"
 };
 
 extern Config config;
@@ -26,7 +27,9 @@ struct Command {
     void (*set)(const String& val);
     void (*get)();
     const char* help;
+    String (*format)();
 };
+
 const Command* findCommand(const String& name);
 void serviceNvs();
 void markDirty();    // for setters
