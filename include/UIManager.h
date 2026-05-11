@@ -1,6 +1,5 @@
 #pragma once
 #include <stdint.h>
-#include "MenuSchema.h"
 
 enum UIMode : uint8_t { MODE_FACE, MODE_MENU };
 
@@ -10,7 +9,8 @@ void serviceUI();
 UIMode getUIMode();
 void   setUIMode(UIMode m);
 
-void   menuBack();
-bool   menuSelect(uint8_t idx);
+// Kept for dispatch-table compatibility (Config.cpp's cmdMenu*)
+void   menuBack();        // exits to FACE mode
+bool   menuSelect(uint8_t idx);  // deprecated, no-op
 void   printMode();
 void   printMenuState();
