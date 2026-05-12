@@ -49,8 +49,7 @@ void serviceUI() {
         }
 
         // Non-blocking idle check
-        if (config.menuTimeoutSec > 0 &&
-            (millis() - _lastActivityMs) >= (uint32_t)config.menuTimeoutSec * 1000) {
+        if (!config.touchDebug && config.menuTimeoutSec > 0 && (millis() - _lastActivityMs) >= (uint32_t)config.menuTimeoutSec * 1000) {
             exitMenu();
             Serial.println("OK: returned to FACE (idle)");
             return;
