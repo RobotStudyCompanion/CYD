@@ -2,7 +2,7 @@
 
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![Latest tag](https://img.shields.io/github/v/tag/RobotStudyCompanion/CYD?sort=semver&label=version)](https://github.com/RobotStudyCompanion/CYD/tags)
-[![Build](https://img.shields.io/github/actions/workflow/status/RobotStudyCompanion/CYD/build.yml?branch=main&label=build)](https://github.com/RobotStudyCompanion/CYD/actions)
+[![Build](https://img.shields.io/github/actions/workflow/status/RobotStudyCompanion/CYD/build.yml?label=build)](https://github.com/RobotStudyCompanion/CYD/actions)
 ![Platform: ESP32](https://img.shields.io/badge/platform-ESP32-orange.svg)
 ![Framework: arduino-esp32](https://img.shields.io/badge/framework-arduino--esp32-blue.svg)
 
