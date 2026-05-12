@@ -21,7 +21,7 @@ static bool     _lastTouched_cached = false;
 void initTouch()
 {
     touchscreen.begin();
-    touchscreen.setRotation(1);
+    touchscreen.setRotation(0);
 }
 
 bool getTouchPoint(uint16_t &x, uint16_t &y, uint16_t &z) {
