@@ -32,3 +32,8 @@ void setBacklight(uint8_t pct) {
     ledcWrite(BL_LEDC_CHANNEL, duty);
     config.brightness = pct;
 }
+
+void reattachBacklight() {
+    ledcAttachPin(BL_PIN, BL_LEDC_CHANNEL);
+    setBacklight(config.brightness);
+}

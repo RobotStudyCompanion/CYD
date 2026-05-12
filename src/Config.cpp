@@ -8,7 +8,6 @@
 #include <TFT_eSPI.h>
 #include "LdrSensor.h"
 #include "UIManager.h"
-#include "MenuSchema.h"
 
 extern TFT_eSPI tft;
 
@@ -65,6 +64,8 @@ static void saveConfig() {
     prefs.putUChar("brDark",        config.brightDark);
     prefs.putBool("hudOn",          config.hudOn);
     prefs.putBool("idleAnim",       config.idleAnim);
+    prefs.putUShort("menuTo",       config.menuTimeoutSec);
+    prefs.putUChar("theme",         (uint8_t)config.theme);
     prefs.end();
 }
 
@@ -82,10 +83,12 @@ void initConfig() {
     config.autoBright  = prefs.getBool ("autoBright", config.autoBright);
     config.brightLight = prefs.getUChar("brLight",    config.brightLight);
     config.brightDark  = prefs.getUChar("brDark",     config.brightDark);
-    config.idleAnim = prefs.getBool("idleAnim",       config.idleAnim);
-    String savedMood     = prefs.getString("mood",     String(config.mood));
+    config.idleAnim    = prefs.getBool("idleAnim",       config.idleAnim);
+    String savedMood   = prefs.getString("mood",     String(config.mood));
+    config.menuTimeoutSec = prefs.getUShort("menuTo", config.menuTimeoutSec);
     strncpy(config.mood, savedMood.c_str(), sizeof(config.mood) - 1);
     config.mood[sizeof(config.mood) - 1] = '\0';
+    config.theme = (ThemeMode)prefs.getUChar("theme", (uint8_t)config.theme);
     prefs.end();
 }
 
@@ -157,6 +160,16 @@ static void cmdSetBgColour(const String &val) {
     if (!parseColour(val, c)) { Serial.println("ERR: bad colour"); return; }
     setBackgroundColour(c); markDirty(); Serial.println("OK");
 }
+static void cmdSetTheme(const String& val) {
+    String v = val; v.toLowerCase();
+    uint16_t bg, eye;
+    if      (v == "light") { bg = 0xFFFF; eye = 0x0000; config.theme = THEME_LIGHT; }
+    else if (v == "dark")  { bg = 0x0000; eye = 0xFFFF; config.theme = THEME_DARK;  }
+    else { Serial.println("ERR: light or dark"); return; }
+    config.bgColour  = bg;  setBackgroundColour(bg);
+    config.eyeColour = eye; setEyeColour(eye);
+    markDirty(); Serial.println("OK");
+}
 static void cmdSetMood(const String &val) {
     String upper = val; upper.toUpperCase();
     if (!isKnownMood(upper)) { Serial.printf("ERR: unknown mood '%s'\n", val.c_str()); return; }
@@ -184,6 +197,17 @@ static void cmdSetBrightDark(const String &val) {
     int v = val.toInt();
     if (v < 0 || v > 100) { Serial.println("ERR: 0-100"); return; }
     config.brightDark = (uint8_t)v; markDirty(); Serial.println("OK");
+}
+static void cmdSetMenuTimeout(const String& val) {
+    int v = val.toInt();
+    if (v < 0 || v > 300) { Serial.println("ERR: 0-300"); return; }
+    config.menuTimeoutSec = (uint16_t)v; markDirty(); Serial.println("OK");
+}
+static void cmdGetMenuTimeout() {
+    Serial.printf("menu_timeout:   %u\n", config.menuTimeoutSec);
+}
+static void cmdGetTheme() {
+    Serial.printf("theme:          %s\n", config.theme == THEME_DARK ? "dark" : "light");
 }
 static void cmdSetMode(const String& val) {
     String u = val; u.toUpperCase();
@@ -267,40 +291,6 @@ static void cmdGetFaceR() {
 }
 static void cmdGetMode()       { printMode(); }
 
-static void cmdMenuSelect(const String& val) {
-    if (!menuSelect((uint8_t)val.toInt())) Serial.println("ERR: select failed");
-}
-static void cmdMenuBack()      { menuBack(); Serial.println("OK"); }
-static void cmdMenuState()     { printMenuState(); }
-
-static void cmdMenuBegin() {
-    runtimeBegin();
-    Serial.println("OK: schema load started");
-}
-static void cmdMenuScreen(const String& val) {
-    if (runtimeAddScreen(val.c_str())) Serial.println("OK");
-    else Serial.println("ERR: addScreen failed");
-}
-static void cmdMenuItem(const String& val) {
-    int c1 = val.indexOf(',');
-    if (c1 < 0) { Serial.println("ERR: need kind,label[,payload]"); return; }
-    int c2 = val.indexOf(',', c1 + 1);
-    String kindStr = val.substring(0, c1); kindStr.toLowerCase();
-    String label   = (c2 < 0) ? val.substring(c1 + 1) : val.substring(c1 + 1, c2);
-    String payload = (c2 < 0) ? String()              : val.substring(c2 + 1);
-    ActionKind k;
-    if      (kindStr == "push")   k = ACT_PUSH;
-    else if (kindStr == "invoke") k = ACT_INVOKE;
-    else if (kindStr == "back")   k = ACT_BACK;
-    else { Serial.println("ERR: kind must be push|invoke|back"); return; }
-    if (runtimeAddItem(k, label.c_str(), payload.c_str())) Serial.println("OK");
-    else Serial.println("ERR: addItem failed");
-}
-static void cmdMenuEnd() {
-    if (runtimeEnd()) Serial.println("OK: schema active");
-    else Serial.println("ERR: runtimeEnd failed (bad PUSH index?)");
-}
-
 // ============ Getter handlers ============
 static void cmdGetTouchDebug() { Serial.printf("touch_debug:    %s\n", config.touchDebug    ? "on" : "off"); }
 static void cmdGetMoodCycle()  { Serial.printf("mood_cycle:     %s\n", config.moodAutoCycle ? "on" : "off"); }
@@ -313,6 +303,15 @@ static void cmdGetAutoBright() { Serial.printf("auto_bright:    %s\n", config.au
 static void cmdGetBrightLight(){ Serial.printf("bright_light:   %u%%\n", config.brightLight); }
 static void cmdGetBrightDark() { Serial.printf("bright_dark:    %u%%\n", config.brightDark); }
 static void cmdGetVersion()    { Serial.printf("version:        %s\n", FW_VERSION); }
+static String fmtBright() { return String(config.brightness) + "%"; }
+static String fmtMood()   { return String(config.mood); }
+static String fmtUptime() {
+    uint32_t s = millis() / 1000;
+    char buf[16];
+    snprintf(buf, sizeof(buf), "%um %us", s / 60, s % 60);
+    return String(buf);
+}
+static String fmtMem() { return String(ESP.getFreeHeap() / 1024) + "K"; }
 
 // ============ Action handlers (no value, no get/set distinction) ============
 static void cmdReset() {
@@ -357,27 +356,21 @@ static const Command commands[] = {
     {"bg_colour",    cmdSetBgColour,    cmdGetBgColour,    "RRGGBB hex"},
     {"bg_color",     cmdSetBgColour,    cmdGetBgColour,    nullptr},   // alias, hidden
     {"idle_anim",    cmdSetIdleAnim,    cmdGetIdleAnim,    "on|off random idle moods"},
-    {"mood",         cmdSetMood,        cmdGetMood,        "NEUTRAL|HAPPY|ANGRY|SAD|EXCITED|ANNOYED|QUESTIONING|IDLE1-3"},
-    {"bright",       cmdSetBright,      cmdGetBright,      "0-100 backlight %"},
+    {"theme",        cmdSetTheme,       cmdGetTheme,       "light | dark (preset bg+eye; use bg_colour/eye_colour for arbitrary)"},
     {"auto_bright",  cmdSetAutoBright,  cmdGetAutoBright,  "on|off LDR-driven brightness"},
     {"bright_light", cmdSetBrightLight, cmdGetBrightLight, "1-100 target % when bright"},
     {"bright_dark",  cmdSetBrightDark,  cmdGetBrightDark,  "1-100 target % when dark"},
+    {"menu_timeout", cmdSetMenuTimeout, cmdGetMenuTimeout, "0-300 seconds (0=disabled)"},
     {"look",         cmdSetLook,        cmdGetLook,        "x,y canvas offset"},
     {"hud",          cmdSetHud,         cmdGetHud,         "on|off Grobot HUD overlay"},
     {"face",         cmdSetFace,        cmdGetFace,        "topH,botH,tilt,pR,r — symmetric custom mood (floats)"},
     {"face_l",       cmdSetFaceL,       cmdGetFaceL,       "topH,botH,tilt,pR,r — left eye only"},
     {"face_r",       cmdSetFaceR,       cmdGetFaceR,       "topH,botH,tilt,pR,r — right eye only"},
     {"mode",         cmdSetMode,        cmdGetMode,        "FACE|MENU"},
-    {"menu_begin",   nullptr,           cmdMenuBegin,      "start runtime schema load"},
-    {"menu_screen",  cmdMenuScreen,     nullptr,           "title  add screen"},
-    {"menu_item",    cmdMenuItem,       nullptr,           "kind,label,payload  add item"},
-    {"menu_end",     nullptr,           cmdMenuEnd,        "finalise + activate runtime schema"},
 
     // Set-only commands
     {"led",          cmdSetLed,         nullptr,           "off|on|red|green|blue|white|yellow|cyan|magenta or r,g,b"},
     {"tap",          cmdSetTap,         nullptr,           "x,y[,z] inject touch"},
-    {"menu_select",  cmdMenuSelect,     nullptr,           "n  select item by index"},
-
 
     // Plain actions (and queries with no setter)
     {"menu_back",    nullptr,           cmdMenuBack,       "pop one level"},
@@ -385,8 +378,6 @@ static const Command commands[] = {
     {"help",         nullptr,           cmdHelp,           "this message"},
     {"status",       nullptr,           cmdStatus,         "print current config"},
     {"version",      nullptr,           cmdGetVersion,     "firmware version"},
-    {"mem",          nullptr,           cmdMem,            "memory snapshot"},
-    {"uptime",       nullptr,           cmdUptime,         "time since boot"},
     {"blink",        nullptr,           cmdBlink,          "trigger one blink"},
     {"ldr",          nullptr,           cmdLdr,            "light sensor reading"},
     {"light",        nullptr,           cmdGetLight,       "ambient brightness 0-100%"},
@@ -397,6 +388,10 @@ static const Command commands[] = {
     {"resume",       nullptr,           cmdResume,         "resume face renderer"},
     {"reboot",       nullptr,           cmdReboot,         "soft reboot (config preserved)"},
     {"reset",        nullptr,           cmdReset,          "clear NVS, reboot to defaults"},
+    {"mood",         cmdSetMood,        cmdGetMood,        "NEUTRAL|HAPPY|ANGRY|SAD|EXCITED|ANNOYED|QUESTIONING|IDLE1-3",       fmtMood},
+    {"bright",       cmdSetBright,      cmdGetBright,      "0-100 backlight %",                                                 fmtBright},
+    {"uptime",       nullptr,           cmdUptime,         "time since boot",                                                   fmtUptime},
+    {"mem",          nullptr,           cmdMem,            "memory snapshot",                                                   fmtMem},
 };
 
 static const size_t COMMAND_COUNT = sizeof(commands) / sizeof(commands[0]);

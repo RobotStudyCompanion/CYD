@@ -1,21 +1,30 @@
 # CYD — Robot Study Companion firmware
 
-Animated robot face with on-screen menus for the [Cheap Yellow Display](https://github.com/witnessmenow/ESP32-Cheap-Yellow-Display) (ESP32-2432S028R), part of the Robot Study Companion (RSC) project. Built on Grobot_Animations and TFT_eSPI, controlled over UART, configured at runtime, persistent across reboots.
+[![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+[![Latest tag](https://img.shields.io/github/v/tag/RobotStudyCompanion/CYD?sort=semver&label=version)](https://github.com/RobotStudyCompanion/CYD/tags)
+[![Build](https://img.shields.io/github/actions/workflow/status/RobotStudyCompanion/CYD/build.yml?label=build)](https://github.com/RobotStudyCompanion/CYD/actions)
+![Platform: ESP32](https://img.shields.io/badge/platform-ESP32-orange.svg)
+![Framework: arduino-esp32](https://img.shields.io/badge/framework-arduino--esp32-blue.svg)
+
+Animated robot face with on-screen touch menus for the [Cheap Yellow Display](https://github.com/witnessmenow/ESP32-Cheap-Yellow-Display) (ESP32-2432S028R), part of the Robot Study Companion (RSC) project. Acts both as a standalone animated companion and as a serial-controlled control surface for a host device (volume / mute / power / reboot). Built on Grobot_Animations, TFT_eSPI, and GUIslice; configured at runtime over UART, persistent across reboots.
 
 ---
 
 ## Features
 
 - **Animated eyes** via [Grobot_Animations](https://github.com/tanmaywankar/Grobot_Animations) — spring physics, 10 preset moods, fine-tunable per-eye in real time
-- **Two-mode UI** — FACE for the eye animation, MENU for on-screen settings; long-press toggles between them
-- **Schema-driven menus** — declarative `MenuScreen` / `MenuItem` arrays in flash, with PUSH / INVOKE / BACK action kinds; menu actions invoke through the same dispatch table as serial commands
-- **Runtime schema push** — `menu_begin` / `menu_screen` / `menu_item` / `menu_end` over UART loads a session-only menu without reflashing
-- **UART command surface** — ~40 commands, dispatch-table parser, auto-generated `help` and `status`
-- **NVS persistence with write debounce** — settable values survive reboot; writes batched after 5s of quiet to spare flash wear
+- **Two-mode UI** — FACE for the eye animation, MENU for on-screen controls; long-press toggles into menu
+- **GUIslice touch UI** built with the GUIslice Builder — main page with sliders and toggle icons, burger menu popup, power popup with destructive-action confirm dialog
+- **Host control surface** — volume / mute / mic / power / reboot dispatched to host service over UART as `host_*` messages
+- **UART command surface** — ~30 commands, dispatch-table parser, auto-generated `help` and `status`
+- **NVS persistence with write debounce** — settable values survive reboot; writes batched after 5 s of quiet to spare flash wear
 - **LDR-driven auto-brightness** with continuous linear mapping and output-side smoothing
+- **Theme command** — `theme:light` / `theme:dark` preset pairs for background and eye colour; arbitrary colours still settable via `bg_colour` / `eye_colour`
+- **Idle timeout** — menu auto-returns to face after configurable inactivity; disabled while touch debug is on
 - **Random idle animation** — periodic cycling between IDLE1/2/3 moods when enabled
-- **Touch event primitives** — TAP / LONG_PRESS state machine with drag-cancel
-- **HUD overlay** (FPS counter), pause/resume, manual blink, canvas look-at, asymmetric eyes
+- **Touch event primitives** — TAP / LONG_PRESS state machine with drag-cancel; debug logging on state transitions (low-spam)
+- **Live stats overlay** in the burger menu — firmware version, uptime, free heap; refreshes at 1 Hz while open
+- **HUD overlay** (Grobot FPS counter), pause/resume, manual blink, canvas look-at, asymmetric eyes
 - **Compile-time debug gates** for touch and LDR diagnostics
 - **Git-describe versioning** baked at build time
 
@@ -25,7 +34,7 @@ Animated robot face with on-screen menus for the [Cheap Yellow Display](https://
 
 - **Board:** ESP32-2432S028R (CYD original variant)
 - **MCU:** ESP32-WROOM, no PSRAM, ~302 KB heap free at boot
-- **Display:** ILI9341, 320×240 landscape, SPI at 55 MHz
+- **Display:** ILI9341, 320×240 landscape, SPI at 55 MHz, mounted at rotation 3 (180° flipped for the enclosure)
 - **Touch:** XPT2046 resistive on its own bitbanged bus (avoids HSPI collision)
 - **LDR:** GPIO 34 (after reflow on this variant — most CYDs ship without a working LDR)
 - **RGB LED:** GPIO 4 (R), 16 (G), 17 (B) — active low
@@ -39,7 +48,7 @@ Animated robot face with on-screen menus for the [Cheap Yellow Display](https://
 | TFT SCK | 14 | |
 | TFT MOSI | 13 | |
 | TFT MISO | 12 | |
-| TFT Backlight | 21 | LEDC PWM, 5 kHz, 8-bit |
+| TFT Backlight | 21 | LEDC PWM channel 0, 5 kHz, 8-bit |
 | Touch CS | 33 | |
 | Touch IRQ | 36 | |
 | LDR | 34 | ADC1, after hardware reflow |
@@ -49,13 +58,15 @@ Animated robot face with on-screen menus for the [Cheap Yellow Display](https://
 
 ## Software stack
 
-| Component | Source | Pinned version |
+| Component | Source | Version (tested) |
 |-----------|--------|----------------|
 | PlatformIO platform | espressif32 | 6.4.0 |
 | Arduino core | arduino-esp32 | 2.0.11 |
 | Display driver | [bodmer/TFT_eSPI](https://github.com/Bodmer/TFT_eSPI) | 2.5.43 |
 | Eye animations | [tanmaywankar/Grobot_Animations](https://github.com/tanmaywankar/Grobot_Animations) | 0.1.3 |
 | Touch driver | [hexeguitar/CYD28_Touchscreen](https://github.com/hexeguitar/CYD28_Touchscreen) | bitbang fork |
+| UI framework | [ImpulseAdventure/GUIslice](https://github.com/ImpulseAdventure/GUIslice) | 0.17.2 |
+| UI layout | GUIslice Builder | 0.17.b41 |
 | NVS | Built-in `Preferences` | — |
 
 ---
@@ -67,22 +78,23 @@ src/
   main.cpp           Pure orchestration — print*, init*, service*
   Config.cpp         Dispatch-table UART parser, NVS load/save with debounce
   FaceRenderer.cpp   Grobot wrapper, splash, mood/colour, pause/resume, idle cycling
-  DisplayInit.cpp    TFT init, backlight PWM (LEDC channel 0)
-  UIManager.cpp      Modes (FACE/MENU), screen stack, hit-testing, render
-  MenuSchema.cpp     Default menu tables + runtime push parser
+  DisplayInit.cpp    TFT init, backlight PWM (LEDC channel 0), reattach helper
+  UIManager.cpp      FACE/MENU modes, long-press transitions, idle timeout, stats tick
+  MenuCallbacks.cpp  GUIslice Builder output — button/slider callbacks, icon swap, stats refresh
+  TouchHandler.cpp   initTouch, raw + event-style polls (TAP / LONG_PRESS), state-transition debug logging
   DebugOverlay.cpp   Touch dots, edge detection, diag helpers
   LdrSensor.cpp      LDR sampling + continuous auto-brightness
-  TouchHandler.cpp   initTouch, raw + event-style polls (TAP/LONG_PRESS)
   LED_Solution.cpp   RGB LED control
 
 include/
+  test_GSLC.h        GUIslice Builder generated — element creation, page layout, image refs
   ... corresponding headers + version.h (auto-generated, gitignored)
 
 scripts/
-  version.py         git describe -> include/version.h, pre-build hook
+  version.py         git describe → include/version.h, pre-build hook
 ```
 
-The `Config` struct is the single source of truth for stateful settings. UART setters mark the config dirty; `serviceNvs()` flushes to NVS after a 5s debounce window (or immediately before reboot). `UIManager` owns mode and screen-stack state; menu actions invoke through the same dispatch table that handles typed serial commands, so adding a new UART command automatically makes it menu-capable.
+The `Config` struct is the single source of truth for stateful settings. UART setters and on-screen toggles both mark the config dirty; `serviceNvs()` flushes to NVS after a 5 s debounce window. `UIManager` owns mode and the menu lifecycle; `MenuCallbacks` (the GUIslice Builder output, hand-extended with state tracking and icon swap logic) handles all on-screen widget callbacks and routes through the same `findCommand()` dispatch table that handles typed serial input.
 
 ```mermaid
 graph TB
@@ -91,6 +103,7 @@ graph TB
     TFT[TFT display]
     LDR[LDR]
     NVS[(NVS)]
+    HOST[Host service]
 
     UART <-->|commands| Config
     TS --> TouchHandler
@@ -98,27 +111,87 @@ graph TB
     Config <-->|persist| NVS
 
     Config[Config<br/>dispatch + NVS debounce]
-    UIManager[UIManager<br/>modes / stack / render]
-    MenuSchema[MenuSchema<br/>defaults + runtime push]
-    TouchHandler[TouchHandler<br/>TAP/LONG_PRESS]
+    UIManager[UIManager<br/>modes / idle timeout / stats tick]
+    MenuCallbacks[MenuCallbacks<br/>GUIslice widgets / icon swap]
+    TouchHandler[TouchHandler<br/>TAP / LONG_PRESS]
     FaceRenderer[FaceRenderer<br/>Grobot + splash + idle]
     DisplayInit[DisplayInit<br/>TFT + backlight PWM]
     LdrSensor[LdrSensor<br/>auto-brightness]
 
     TouchHandler -->|events| UIManager
-    UIManager --> MenuSchema
-    UIManager -.INVOKE.-> Config
+    UIManager -->|gslc_Update| MenuCallbacks
+    MenuCallbacks -.findCommand.-> Config
+    MenuCallbacks -->|host_*| HOST
+    MenuCallbacks -->|setBacklight| DisplayInit
     Config -.dispatch.-> FaceRenderer
     Config -.dispatch.-> UIManager
     Config -.dispatch.-> DisplayInit
 
-    UIManager -->|menu render| TFT
+    MenuCallbacks -->|menu render| TFT
     FaceRenderer -->|eye animation| TFT
     DisplayInit -->|init / PWM| TFT
     LdrSensor -.brightness.-> DisplayInit
 ```
 
-The crucial connection is `UIManager -.INVOKE.-> Config`: menu actions and typed serial commands both flow through `findCommand()` and the dispatch table, so the menu surface automatically tracks any new UART command without separate wiring.
+Adding a new UART command automatically makes it accessible from on-screen widgets, since menu callbacks invoke through the same dispatch table.
+
+---
+
+## On-screen UI
+
+Three GUIslice pages plus a confirm popup, navigated entirely by touch.
+
+### Main page (`E_PG_MAIN`)
+
+Default screen after long-pressing into menu mode.
+
+| Element | Position | Action |
+|---|---|---|
+| Power button | top-left | Opens power popup |
+| Burger menu button | top-right | Opens burger menu popup |
+| RSC logo | centre-left | Returns to FACE mode |
+| Back arrow | right-middle | Returns to FACE mode |
+| Volume slider | right column | Posts `host_vol:NN` to UART (throttled to ~10 Hz) |
+| Brightness slider | middle column | Sets local backlight via LEDC; broadcasts `bright:NN` (throttled) |
+| Volume mute icon | below volume slider | Posts `host_mute`; icon swaps mute / low / loud based on slider level |
+| Mic icon | below volume mute | Posts `host_mic`; icon swaps active / muted |
+| Auto-brightness icon | below brightness slider | Toggles `auto_bright`; icon swaps manual / auto |
+
+Sliders are inverted: top = max, bottom = min (matches the 180°-flipped enclosure mount).
+
+### Burger menu (`E_PG_BURGER_MENU`)
+
+Settings popup.
+
+| Element | Action |
+|---|---|
+| Debug toggle | Flips `touch_debug` (also disables idle timeout while on) |
+| Theme toggle | Flips `theme:light` / `theme:dark` |
+| Stats text | Firmware version (tag + commits, `+` suffix if dirty), uptime, free heap — refreshes 1 Hz while open |
+| Back arrow | Close popup |
+
+### Power popup (`E_PG_PWR`)
+
+2×2 grid for power actions, split by a horizontal line.
+
+| Row | Left | Right |
+|---|---|---|
+| Raspberry Pi | Poweroff (destructive → confirm) | Reboot (recoverable) |
+| Front panel (CYD) | Reset (destructive, wipes NVS → confirm) | Reboot (recoverable) |
+
+Plus a back arrow to dismiss. Destructive actions route through a reusable confirm popup (`E_PG_POPUP_CONFIRM`) with Yes / Cancel; recoverable actions fire immediately.
+
+### Mode transitions
+
+| From | To | Trigger |
+|---|---|---|
+| FACE | MENU | Long-press (~1 s) anywhere |
+| FACE | MENU | `mode:MENU` over serial |
+| MENU | FACE | Tap RSC logo or back arrow on main page |
+| MENU | FACE | Idle timeout (default 10 s, configurable via `menu_timeout`) |
+| MENU | FACE | `mode:FACE` over serial |
+
+Idle timeout is suspended while `touch_debug:on` — useful when debugging touch coordinates without the menu closing on you.
 
 ---
 
@@ -132,34 +205,36 @@ All commands travel over USB serial at **115200 baud**, newline-terminated.
 
 Type `help` for the full list. `status` prints all current settable values.
 
+Boolean values accept any of: `on`/`off`, `true`/`false`, `yes`/`no`, `1`/`0` (case-insensitive).
+
 ### Selected commands
 
 | Command | Form | Example | Notes |
 |---------|------|---------|-------|
 | `mood` | setter+getter | `mood:HAPPY` | NEUTRAL, HAPPY, ANGRY, SAD, EXCITED, ANNOYED, QUESTIONING, IDLE1-3 |
-| `mood_cycle` | toggle | `mood_cycle:on` | Auto-cycle through moods every 5–8s |
-| `idle_anim` | toggle | `idle_anim:on` | Random IDLE1/2/3 every 5–15s when `mood_cycle` is off |
+| `mood_cycle` | toggle | `mood_cycle:on` | Auto-cycle through moods every 5–8 s |
+| `idle_anim` | toggle | `idle_anim:on` | Random IDLE1/2/3 every 5–15 s when `mood_cycle` is off |
+| `theme` | setter+getter | `theme:dark` | `light` (white bg / black eyes) or `dark` (black bg / white eyes) |
 | `face` | setter+getter | `face:0,50,0,30,45` | Symmetric custom mood: topH,botH,tilt,pR,r |
 | `face_l` / `face_r` | setter+getter | `face_l:0,30,0,30,45` | Per-eye asymmetric override |
 | `look` | setter+getter | `look:30,-20` | Canvas offset (eye gaze direction) |
 | `blink` | action | `blink` | Manual blink |
 | `hud` | toggle | `hud:on` | FPS overlay (Grobot built-in) |
-| `eye_colour` / `bg_colour` | setters | `eye_colour:00FF00` | RGB565, 6 hex digits |
-| `bright` | setter+getter | `bright:50` | Manual backlight 0–100% |
+| `eye_colour` / `bg_colour` | setters | `eye_colour:00FF00` | RGB565, 6 hex digits; aliases `eye_color` / `bg_color` |
+| `bright` | setter+getter | `bright:50` | Manual backlight 1–100 % |
 | `auto_bright` | toggle | `auto_bright:on` | LDR-driven |
-| `bright_light` / `bright_dark` | setters | `bright_dark:1` | Auto-brightness endpoints (1–100%) |
-| `pause` / `resume` | actions | — | Freeze/unfreeze face renderer |
+| `bright_light` / `bright_dark` | setters | `bright_dark:1` | Auto-brightness endpoints (0–100 %) |
+| `menu_timeout` | setter+getter | `menu_timeout:30` | Idle timeout in seconds (0 = disabled) |
+| `touch_debug` | toggle | `touch_debug:on` | State-transition debug logging on touch events |
+| `touch_dots` | toggle | `touch_dots:on` | Visual touch dots on screen |
+| `pause` / `resume` | actions | — | Freeze / unfreeze face renderer |
 | `clear` | action | — | Wipe screen with background colour |
 | `splash` | action | — | Re-show "RSC-CYD" splash |
 | `tap` | action | `tap:160,120,1500` | Inject synthetic touch (debugging) |
 | `led` | setter | `led:cyan` | RGB LED: off/on/red/green/blue/white/yellow/cyan/magenta or `r,g,b` |
 | `mode` | setter+getter | `mode:MENU` | FACE / MENU; long-press is the touch-side equivalent |
-| `menu` | action | `menu` | Print current screen + items |
-| `menu_back` | action | — | Pop one menu level |
-| `menu_select` | setter | `menu_select:0` | Select item by 0-based index |
-| `menu_begin` / `menu_end` | actions | — | Start / finalise a runtime schema load |
-| `menu_screen` | setter | `menu_screen:Custom` | Add a screen during runtime load |
-| `menu_item` | setter | `menu_item:invoke,Brighter,bright:75` | `kind,label[,payload]` (kind = push/invoke/back) |
+| `menu` | action | `menu` | Print current menu state |
+| `menu_back` | action | — | Exit menu (returns to FACE) |
 | `mem` / `uptime` / `version` | actions | — | Diagnostics |
 | `ldr` / `light` / `lux` | actions | — | Light sensor readouts |
 | `reboot` / `reset` | actions | — | Soft reboot / NVS wipe + reboot |
@@ -169,59 +244,26 @@ Type `help` for the full list. `status` prints all current settable values.
 ```bash
 # From a host machine over USB serial:
 echo "mood:HAPPY" > /dev/ttyUSB0
+echo "theme:dark" > /dev/ttyUSB0
 echo "auto_bright:on" > /dev/ttyUSB0
 echo "status" > /dev/ttyUSB0
 ```
 
-```text
-# Push a runtime menu over UART (overrides the compiled-in default for the session):
-menu_begin
-menu_screen:Custom
-menu_item:push,Sub,1
-menu_item:invoke,Bright max,bright:100
-menu_item:back,Resume,
-menu_screen:Sub
-menu_item:invoke,Blink,blink
-menu_item:back,Back,
-menu_end
-```
-
 ---
 
-## Menus
+## Host serial contract
 
-Two top-level UI modes:
+When the user interacts with on-screen widgets whose state lives on the host (volume, mute, mic, power), the firmware emits short uppercase-namespaced messages over UART. A host service is expected to consume these.
 
-- **FACE** — animated eyes, splash, idle cycling, etc.
-- **MENU** — on-screen menu, navigated by touch.
+| Message | Trigger | Notes |
+|---|---|---|
+| `host_vol:NN` | Volume slider drag | NN in 0–100; throttled to ~10 Hz during drag |
+| `host_mute` | Volume mute icon tap | Idempotent toggle request; CYD does not track audio mute state |
+| `host_mic` | Mic icon tap | Idempotent toggle request; CYD does not track mic state |
+| `host_reboot` | Pi Reboot menu button | Recoverable; no confirmation needed |
+| `host_poweroff` | Pi Poweroff menu button | Confirmed through the Yes/Cancel popup before emission |
 
-**Enter:** long-press (~1s) on the screen, or send `mode:MENU`.
-**Navigate:** tap an item row to fire its action; tap a `BACK` row to pop one level.
-**Exit:** popping past the root returns to FACE automatically, or long-press anywhere to exit immediately.
-
-### Action kinds
-
-Each `MenuItem` carries an `ActionKind`:
-
-- **`PUSH`** — navigate into a sub-screen. Payload is a `MenuScreen*` (compiled-in) or a 0-based screen index (runtime-pushed schema).
-- **`INVOKE`** — fire a UART command string (e.g. `"bright:75"`, `"blink"`). Routed through the same `findCommand()` path that handles typed serial input — no separate code paths.
-- **`BACK`** — pop one screen off the stack.
-
-### Default menu
-
-Compiled into firmware (`src/MenuSchema.cpp`):
-
-```
-Menu
-├── Brightness ▶  (25% / 50% / 75% / 100% / Back)
-├── Mood ▶        (Neutral / Happy / Sad / Angry / Back)
-├── Blink
-└── Resume
-```
-
-### Runtime schema push
-
-`menu_begin` … `menu_end` loads a session-only schema that replaces the active root for the rest of the session; reboot reverts to the compiled default. Bounds: 8 screens, 8 items per screen, ~1 KB pooled string storage. Items reference push targets by 0-based screen index in the schema being loaded.
+The CYD does not parse these messages back, so a host that echoes them won't loop.
 
 ---
 
@@ -235,6 +277,27 @@ pio device monitor
 ```
 
 `pio device monitor` opens a serial console at the right baud. Type `help` once it boots.
+
+### CI build status (optional)
+
+The build shield in the header references a GitHub Actions workflow. A minimal workflow that runs `pio run` on push:
+
+```yaml
+# .github/workflows/build.yml
+name: build
+on: [push, pull_request]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.x' }
+      - run: pip install platformio
+      - run: pio run
+```
+
+Once committed under `.github/workflows/build.yml`, the shield will reflect the latest run.
 
 ---
 
@@ -250,21 +313,26 @@ build_flags =
 
 Uncomment to enable per-module Serial output. Defaults to silent for production builds.
 
-For symbolised crash backtraces (instead of bare hex addresses), also uncomment:
+Runtime debug is also available without rebuilding:
 
-```ini
-monitor_filters = esp32_exception_decoder
+```bash
+echo "touch_debug:on" > /dev/ttyUSB0    # state-transition logging on touch
+echo "touch_dots:on"  > /dev/ttyUSB0    # visual touch dots on screen
 ```
+
+Symbolised crash backtraces (instead of bare hex addresses) are enabled by default via `monitor_filters = esp32_exception_decoder` in `platformio.ini`. Comment it out if you want raw addresses.
 
 ---
 
 ## Versioning
 
-Tags follow [SemVer](https://semver.org). The pre-build script `scripts/version.py` runs `git describe` and writes the result to `include/version.h`, so every binary reports its provenance over the `version` UART command:
+Tags follow [SemVer](https://semver.org). The pre-build script `scripts/version.py` runs `git describe` and writes the result to `include/version.h`, so every binary reports its provenance over the `version` UART command and on the in-menu stats overlay:
 
-- Tagged commit: `Firmware: v0.1.0`
-- Untagged commit: `Firmware: v0.1.0-3-gabc123`
-- Uncommitted changes: `Firmware: v0.1.0-3-gabc123-dirty`
+- Tagged commit: `Firmware: v0.3.0`
+- Untagged commit: `Firmware: v0.3.0-3-gabc123`
+- Uncommitted changes: `Firmware: v0.3.0-3-gabc123-dirty`
+
+The on-screen stats overlay shortens the version to the tag + commits-since portion and appends a `+` if the working tree was dirty at build.
 
 ---
 
@@ -280,3 +348,4 @@ Apache 2.0 — see [LICENSE](LICENSE).
 - **[Tanmay Wankar](https://github.com/tanmaywankar)** for Grobot_Animations
 - **[Bodmer](https://github.com/Bodmer)** for TFT_eSPI
 - **[hexeguitar](https://github.com/hexeguitar)** for the CYD touchscreen fork and the [LDR hardware mod reference](https://github.com/hexeguitar/ESP32_TFT_PIO#ldr)
+- **[ImpulseAdventure](https://github.com/ImpulseAdventure)** for GUIslice and the GUIslice Builder layout tool
