@@ -25,16 +25,22 @@ void initTouch()
 }
 
 bool getTouchPoint(uint16_t &x, uint16_t &y, uint16_t &z) {
-    if (!touchscreen.touched()) {
+    bool touchedNow = touchscreen.touched();
+    if (!touchedNow) {
+        if (config.touchDebug && _lastTouched_cached) Serial.println("released");
         _lastTouched_cached = false;
-        if (config.touchDebug) Serial.println("not touched");
         return false;
     }
     CYD28_TS_Point p = touchscreen.getPointScaled();
     if (config.touchDebug) {
-        Serial.print("RAW X = "); Serial.print(p.x);
-        Serial.print(" | RAW Y = "); Serial.print(p.y);
-        Serial.print(" | RAW Z = "); Serial.println(p.z);
+        static uint32_t _lastRawPrintMs = 0;
+        if (!_lastTouched_cached) {
+            Serial.printf("touch DOWN at (%d,%d) z=%d\n", p.x, p.y, p.z);
+            _lastRawPrintMs = millis();
+        } else if (millis() - _lastRawPrintMs >= 200) {
+            Serial.printf("RAW (%d,%d) z=%d\n", p.x, p.y, p.z);
+            _lastRawPrintMs = millis();
+        }
     }
     x = p.x; y = p.y; z = p.z;
     _lastX_cached = x; _lastY_cached = y; _lastZ_cached = z;

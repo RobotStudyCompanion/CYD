@@ -1,6 +1,7 @@
 #include "test_GSLC.h"
 #include "UIManager.h"
 #include "Config.h"
+#include "DisplayInit.h" // setBacklight
 #include "version.h"
 
 
@@ -253,17 +254,23 @@ bool CbSlidePos(void* pvGui,void* pvElemRef,int16_t nPos)
   // From the element's ID we can determine which slider was updated.
   switch (pElem->nId) {
 //<Slider Enums !Start!>
-    case E_ELEM_SLIDER2:  // volume — track + reflect in icon
-      _volumeLevel = nPos;
-      Serial.printf("host_vol:%d\n", nPos);
-      if (!_muted) refreshVolumeIcon();
+    case E_ELEM_SLIDER2: {  // volume — throttled host updates (~10 Hz)
+    _volumeLevel = nPos;
+    static uint32_t _lastVolSendMs = 0;
+    if (millis() - _lastVolSendMs >= 100) {
+        Serial.printf("host_vol:%d\n", nPos);
+        _lastVolSendMs = millis();
+    }
+    if (!_muted) refreshVolumeIcon();
+    break;
+    }
+    case E_ELEM_SLIDER3: {  // brightness — direct call, no "OK" spam
+      int16_t v = (nPos < 1) ? 1 : nPos;
+      config.autoBright = false;
+      setBacklight((uint8_t)v);
+      markDirty();
       break;
-    case E_ELEM_SLIDER3: {  // brightness
-      int16_t v = (nPos < 1) ? 1 : nPos;   // cmdSetBright requires 1-100
-      const Command* cmd = findCommand(String("bright"));
-      if (cmd && cmd->set) cmd->set(String(v));
-      break;
-}
+    }
 
 //<Slider Enums !End!>
     default:

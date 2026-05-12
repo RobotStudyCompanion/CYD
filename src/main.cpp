@@ -32,8 +32,9 @@ void setup() {
     gslc_InitDebug(&DebugOut);
     gslc_InitTouchHandler(&m_touch);
     InitGUIslice_gen();
+    reattachBacklight(); // restore PWM control of backlight
     initMenuIcons();
-    initUI();        // _mode = FACE
+    initUI(); // _mode = FACE
     setupLed();
     Serial.println("RSC ready");
 }

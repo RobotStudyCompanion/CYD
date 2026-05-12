@@ -357,8 +357,6 @@ static const Command commands[] = {
     {"bg_color",     cmdSetBgColour,    cmdGetBgColour,    nullptr},   // alias, hidden
     {"idle_anim",    cmdSetIdleAnim,    cmdGetIdleAnim,    "on|off random idle moods"},
     {"theme",        cmdSetTheme,       cmdGetTheme,       "light | dark (preset bg+eye; use bg_colour/eye_colour for arbitrary)"},
-    {"mood",         cmdSetMood,        cmdGetMood,        "NEUTRAL|HAPPY|ANGRY|SAD|EXCITED|ANNOYED|QUESTIONING|IDLE1-3"},
-    {"bright",       cmdSetBright,      cmdGetBright,      "0-100 backlight %"},
     {"auto_bright",  cmdSetAutoBright,  cmdGetAutoBright,  "on|off LDR-driven brightness"},
     {"bright_light", cmdSetBrightLight, cmdGetBrightLight, "1-100 target % when bright"},
     {"bright_dark",  cmdSetBrightDark,  cmdGetBrightDark,  "1-100 target % when dark"},
@@ -380,8 +378,6 @@ static const Command commands[] = {
     {"help",         nullptr,           cmdHelp,           "this message"},
     {"status",       nullptr,           cmdStatus,         "print current config"},
     {"version",      nullptr,           cmdGetVersion,     "firmware version"},
-    {"mem",          nullptr,           cmdMem,            "memory snapshot"},
-    {"uptime",       nullptr,           cmdUptime,         "time since boot"},
     {"blink",        nullptr,           cmdBlink,          "trigger one blink"},
     {"ldr",          nullptr,           cmdLdr,            "light sensor reading"},
     {"light",        nullptr,           cmdGetLight,       "ambient brightness 0-100%"},
