@@ -32,6 +32,7 @@ void setup() {
     gslc_InitDebug(&DebugOut);
     gslc_InitTouchHandler(&m_touch);
     InitGUIslice_gen();
+    gslc_GuiRotate(&m_gui, 3);    // flip menu + touch axes
     reattachBacklight(); // restore PWM control of backlight
     initMenuIcons();
     initUI(); // _mode = FACE
