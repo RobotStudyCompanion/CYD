@@ -14,3 +14,6 @@ void   menuBack();        // exits to FACE mode
 bool   menuSelect(uint8_t idx);  // deprecated, no-op
 void   printMode();
 void   printMenuState();
+
+void cmdMenuBack();   // calls menuBack() + prints OK
+void cmdMenuState();  // calls printMenuState()
