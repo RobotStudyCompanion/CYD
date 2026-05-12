@@ -9,6 +9,7 @@
 extern TFT_eSPI tft;
 
 static UIMode _mode = MODE_FACE;
+static uint32_t _lastActivityMs = 0;
 
 static void enterMenu() {
     _mode = MODE_MENU;
@@ -16,6 +17,7 @@ static void enterMenu() {
     tft.fillScreen(TFT_BLACK);
     gslc_SetPageCur(&m_gui, MENU_PG_ROOT);
     gslc_PageRedrawSet(&m_gui, true);   // force full redraw on entry
+    _lastActivityMs = millis();
 }
 
 static void exitMenu() {
@@ -31,21 +33,29 @@ void initUI() {
 
 void serviceUI() {
     TouchEvent ev;
-    bool gotEvent = pollTouchEvent(ev);   // also refreshes peekLastTouch cache
+    bool gotEvent = pollTouchEvent(ev);
 
-    // Long-press toggles mode in either direction.
-    // TAP events fall through — GUIslice handles taps via peekLastTouch.
-    if (gotEvent && ev.kind == TOUCH_LONG_PRESS) {
-        if (_mode == MODE_FACE) {
-            enterMenu();
-            Serial.println("OK: entered MENU");
-        } else {
-            exitMenu();
-            Serial.println("OK: returned to FACE");
-        }
+    // Enter menu on long-press from face (one-way)
+    if (gotEvent && ev.kind == TOUCH_LONG_PRESS && _mode == MODE_FACE) {
+        enterMenu();
+        Serial.println("OK: entered MENU");
     }
 
     if (_mode == MODE_MENU) {
+        // Any finger contact resets activity timer (taps, drags, holds all count)
+        uint16_t tx, ty, tz;
+        if (peekLastTouch(tx, ty, tz)) {
+            _lastActivityMs = millis();
+        }
+
+        // Non-blocking idle check
+        if (config.menuTimeoutSec > 0 &&
+            (millis() - _lastActivityMs) >= (uint32_t)config.menuTimeoutSec * 1000) {
+            exitMenu();
+            Serial.println("OK: returned to FACE (idle)");
+            return;
+        }
+
         gslc_Update(&m_gui);
     }
 }
@@ -65,6 +75,15 @@ bool menuSelect(uint8_t idx) {
     (void)idx;
     Serial.println("ERR: menu_select deprecated — use touch UI");
     return false;
+}
+
+void cmdMenuBack() {
+    menuBack();
+    Serial.println("OK");
+}
+
+void cmdMenuState() {
+    printMenuState();
 }
 
 void printMode() {
