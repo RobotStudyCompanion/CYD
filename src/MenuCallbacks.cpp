@@ -1,4 +1,5 @@
 #include "test_GSLC.h"
+#include "UIManager.h"
 #include "Config.h"
 
 
@@ -50,6 +51,7 @@ bool CbBtnCommon(void* pvGui,void *pvElemRef,gslc_teTouch eTouch,int16_t nX,int1
     switch (pElem->nId) {
 //<Button Enums !Start!>
       case E_ELEM_IMAGEBTN_BACK:
+        setUIMode(MODE_FACE);
         break;
       case E_ELEM_IMAGEBTN_VOLUME:
         break;
@@ -57,7 +59,8 @@ bool CbBtnCommon(void* pvGui,void *pvElemRef,gslc_teTouch eTouch,int16_t nX,int1
         break;
       case E_ELEM_IMAGEBTN_BRIGHTNESS:
         break;
-      case E_ELEM_IMAGEBTN5:
+      case E_ELEM_IMAGEBTN5:    // RSC logo — returns to face per UI design
+        setUIMode(MODE_FACE);
         break;
       case E_ELEM_IMAGEBTN_BURGER:
         gslc_PopupShow(&m_gui, E_PG_BURGER_MENU, true);
@@ -74,12 +77,12 @@ bool CbBtnCommon(void* pvGui,void *pvElemRef,gslc_teTouch eTouch,int16_t nX,int1
           ;
         }
         break;
-      case E_ELEM_TOGGLE_DEBUG:
-        // TODO Add code for Toggle button ON/OFF state
-        if (gslc_ElemXTogglebtnGetState(&m_gui, m_pElemToggle2_7)) {
-          ;
-        }
+      case E_ELEM_TOGGLE_DEBUG: {
+        bool state = gslc_ElemXTogglebtnGetState(&m_gui, m_pElemToggle2_7);
+        const Command* cmd = findCommand(String("touch_debug"));
+        if (cmd && cmd->set) cmd->set(state ? "on" : "off");
         break;
+      }
       case E_ELEM_IMAGEBTN_PWR_CLOSE:
         gslc_PopupHide(&m_gui);
         break;
@@ -147,14 +150,15 @@ bool CbSlidePos(void* pvGui,void* pvElemRef,int16_t nPos)
   // From the element's ID we can determine which slider was updated.
   switch (pElem->nId) {
 //<Slider Enums !Start!>
-    case E_ELEM_SLIDER2:
-      // Fetch the slider position
-      nVal = gslc_ElemXSliderGetPos(pGui,m_pElemSlider2);
+    case E_ELEM_SLIDER2:  // volume — sends to host service
+      Serial.printf("host_vol:%d\n", nPos);
       break;
-    case E_ELEM_SLIDER3:
-      // Fetch the slider position
-      nVal = gslc_ElemXSliderGetPos(pGui,m_pElemSlider2_3);
+    case E_ELEM_SLIDER3: {  // brightness
+      int16_t v = (nPos < 1) ? 1 : nPos;   // cmdSetBright requires 1-100
+      const Command* cmd = findCommand(String("bright"));
+      if (cmd && cmd->set) cmd->set(String(v));
       break;
+}
 
 //<Slider Enums !End!>
     default:
