@@ -254,21 +254,28 @@ bool CbSlidePos(void* pvGui,void* pvElemRef,int16_t nPos)
   // From the element's ID we can determine which slider was updated.
   switch (pElem->nId) {
 //<Slider Enums !Start!>
-    case E_ELEM_SLIDER2: {  // volume — throttled host updates (~10 Hz)
-    _volumeLevel = nPos;
-    static uint32_t _lastVolSendMs = 0;
-    if (millis() - _lastVolSendMs >= 100) {
-        Serial.printf("host_vol:%d\n", nPos);
-        _lastVolSendMs = millis();
+    case E_ELEM_SLIDER2: {  // volume — invert + throttle
+      int16_t v = 100 - nPos;   // top = 100, bottom = 0
+      _volumeLevel = v;
+      static uint32_t _lastVolSendMs = 0;
+      if (millis() - _lastVolSendMs >= 100) {
+          Serial.printf("host_vol:%d\n", v);
+          _lastVolSendMs = millis();
+      }
+      if (!_muted) refreshVolumeIcon();
+      break;
     }
-    if (!_muted) refreshVolumeIcon();
-    break;
-    }
-    case E_ELEM_SLIDER3: {  // brightness — direct call, no "OK" spam
-      int16_t v = (nPos < 1) ? 1 : nPos;
+    case E_ELEM_SLIDER3: {  // brightness — invert
+      int16_t pos = 100 - nPos;
+      int16_t v = (pos < 1) ? 1 : pos;
       config.autoBright = false;
       setBacklight((uint8_t)v);
       markDirty();
+      static uint32_t _lastBrightSendMs = 0;
+      if (millis() - _lastBrightSendMs >= 100) {
+          Serial.printf("bright:%d\n", v);
+          _lastBrightSendMs = millis();
+      }
       break;
     }
 
