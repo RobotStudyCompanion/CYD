@@ -44,6 +44,7 @@ void initFaceRenderer(TFT_eSPI *tft)
 void showSplash()
 {
     if (!_tft) return;
+    _tft->setRotation(3); // re-orientation
     _tft->fillScreen(config.bgColour);
     _tft->setTextColor(config.eyeColour);
     _tft->setTextSize(3);
@@ -74,7 +75,7 @@ void serviceFaceRenderer()
     } else {
         _nextIdleSwitch = 0;
     }
-    if (_paused) return;   // <-- new
+    if (_paused) return;
     if (config.moodAutoCycle) _eyes->moodSwitch(true);
     _eyes->renderEmotions(*_canvas);
     if (_hudOn) _eyes->HUD(*_tft);
