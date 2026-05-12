@@ -58,7 +58,7 @@ Animated robot face with on-screen touch menus for the [Cheap Yellow Display](ht
 
 ## Software stack
 
-| Component | Source | Pinned version |
+| Component | Source | Version (tested) |
 |-----------|--------|----------------|
 | PlatformIO platform | espressif32 | 6.4.0 |
 | Arduino core | arduino-esp32 | 2.0.11 |
@@ -205,6 +205,8 @@ All commands travel over USB serial at **115200 baud**, newline-terminated.
 
 Type `help` for the full list. `status` prints all current settable values.
 
+Boolean values accept any of: `on`/`off`, `true`/`false`, `yes`/`no`, `1`/`0` (case-insensitive).
+
 ### Selected commands
 
 | Command | Form | Example | Notes |
@@ -318,11 +320,7 @@ echo "touch_debug:on" > /dev/ttyUSB0    # state-transition logging on touch
 echo "touch_dots:on"  > /dev/ttyUSB0    # visual touch dots on screen
 ```
 
-For symbolised crash backtraces (instead of bare hex addresses), uncomment:
-
-```ini
-monitor_filters = esp32_exception_decoder
-```
+Symbolised crash backtraces (instead of bare hex addresses) are enabled by default via `monitor_filters = esp32_exception_decoder` in `platformio.ini`. Comment it out if you want raw addresses.
 
 ---
 
