@@ -51,6 +51,7 @@ bool CbBtnCommon(void* pvGui,void *pvElemRef,gslc_teTouch eTouch,int16_t nX,int1
     switch (pElem->nId) {
 //<Button Enums !Start!>
       case E_ELEM_IMAGEBTN_BACK:
+        // Exit via long-press only — handled in UIManager::serviceUI  
         setUIMode(MODE_FACE);
         break;
       case E_ELEM_IMAGEBTN_VOLUME:
@@ -60,7 +61,7 @@ bool CbBtnCommon(void* pvGui,void *pvElemRef,gslc_teTouch eTouch,int16_t nX,int1
       case E_ELEM_IMAGEBTN_BRIGHTNESS:
         break;
       case E_ELEM_IMAGEBTN5:    // RSC logo — returns to face per UI design
-        setUIMode(MODE_FACE);
+        setUIMode(MODE_FACE); // RSC logo — exit via long-press only
         break;
       case E_ELEM_IMAGEBTN_BURGER:
         gslc_PopupShow(&m_gui, E_PG_BURGER_MENU, true);
