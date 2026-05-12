@@ -11,7 +11,7 @@
 
 #ifndef _GUISLICE_GEN_H
 #define _GUISLICE_GEN_H
-// keep root page first
+
 // ------------------------------------------------
 // Headers to include
 // ------------------------------------------------
@@ -21,20 +21,9 @@
 // Include any extended elements
 //<Includes !Start!>
 // Include extended elements
-#include "elem/XCheckbox.h"
-#include "elem/XKeyPad_Alpha.h"
-#include "elem/XKeyPad_Num.h"
-#include "elem/XProgress.h"
-#include "elem/XRamp.h"
-#include "elem/XRingGauge.h"
 #include "elem/XSlider.h"
-#include "elem/XSpinner.h"
+#include "elem/XToggleImgbtn.h"
 #include "elem/XTogglebtn.h"
-
-// Ensure optional features are enabled in the configuration
-#if !(GSLC_FEATURE_COMPOUND)
-  #error "Config: GSLC_FEATURE_COMPOUND required for this program but not enabled. Please see: https://github.com/ImpulseAdventure/GUIslice/wiki/Configuring-GUIslice"
-#endif
 //<Includes !End!>
 
 // ------------------------------------------------
@@ -52,20 +41,33 @@
 // Defines for resources
 // ------------------------------------------------
 //<Resources !Start!>
+extern "C" const unsigned short auto_bright_40x40px[] PROGMEM;
+extern "C" const unsigned short back_40x40px[] PROGMEM;
+extern "C" const unsigned short burger_icon_40x40px[] PROGMEM;
+extern "C" const unsigned short mic_on_icon_40x40px[] PROGMEM;
+extern "C" const unsigned short power_icon_40x40px[] PROGMEM;
+extern "C" const unsigned short rsc_130x130[] PROGMEM;
+extern "C" const unsigned short volume_loud_icon2_40x40px[] PROGMEM;
 //<Resources !End!>
 
 // ------------------------------------------------
 // Enumerations for pages, elements, fonts, images
 // ------------------------------------------------
 //<Enum !Start!>
-enum {E_PG_MAIN,E_POP_KEYPAD_NUM,E_POP_KEYPAD_ALPHA};
-enum {E_ELEM_BOX1,E_ELEM_BTN1,E_ELEM_BTN2,E_ELEM_CHECK1
-      ,E_ELEM_NUMINPUT1,E_ELEM_PROGRESS1,E_ELEM_RADIO1
-      ,E_ELEM_RAMPGAUGE1,E_ELEM_RINGGAUGE1,E_ELEM_SLIDER1
-      ,E_ELEM_SPINNER1,E_ELEM_TEXT1,E_ELEM_TEXTINPUT1,E_ELEM_TOGGLE1
-      ,E_ELEM_KEYPAD_NUM,E_ELEM_KEYPAD_ALPHA};
+enum {E_PG_MAIN,E_PG_BURGER_MENU,E_PG_PWR,E_PG_POPUP_CONFIRM};
+enum {E_DRAW_LINE1,E_DRAW_LINE2,E_DRAW_LINE3,E_ELEM_BOX1
+      ,E_ELEM_BOX_CONFIRM,E_ELEM_BTN10,E_ELEM_BTN11,E_ELEM_BTN5
+      ,E_ELEM_BTN6,E_ELEM_BTN_CANCEL,E_ELEM_BTN_MENU_CLOSE
+      ,E_ELEM_BTN_YES,E_ELEM_IMAGEBTN5,E_ELEM_IMAGEBTN_BACK
+      ,E_ELEM_IMAGEBTN_BRIGHTNESS,E_ELEM_IMAGEBTN_BURGER
+      ,E_ELEM_IMAGEBTN_CONFIRM_BACK,E_ELEM_IMAGEBTN_MIC
+      ,E_ELEM_IMAGEBTN_PWR,E_ELEM_IMAGEBTN_PWR_CLOSE
+      ,E_ELEM_IMAGEBTN_VOLUME,E_ELEM_MENU_BOX,E_ELEM_PWR_BOX
+      ,E_ELEM_SLIDER2,E_ELEM_SLIDER3,E_ELEM_TEXT10,E_ELEM_TEXT9
+      ,E_ELEM_TEXT_CONFIRM,E_ELEM_TEXT_DEBUG_TOGGLE,E_ELEM_TEXT_STATS
+      ,E_ELEM_TEXT_THEME,E_ELEM_TOGGLE_DEBUG,E_ELEM_TOGGLE_THEME};
 // Must use separate enum for fonts with MAX_FONT at end to use gslc_FontSet.
-enum {E_BUILTIN5X8,MAX_FONT};
+enum {E_BUILTIN10X16,E_BUILTIN15X24,MAX_FONT};
 //<Enum !End!>
 
 // ------------------------------------------------
@@ -76,10 +78,19 @@ enum {E_BUILTIN5X8,MAX_FONT};
 // Define the maximum number of elements and pages
 // ------------------------------------------------
 //<ElementDefines !Start!>
-#define MAX_PAGE                3
+#define MAX_PAGE                4
 
-#define MAX_ELEM_PG_MAIN 14 // # Elems total on page
+#define MAX_ELEM_PG_MAIN 10 // # Elems total on page
 #define MAX_ELEM_PG_MAIN_RAM MAX_ELEM_PG_MAIN // # Elems in RAM
+
+#define MAX_ELEM_PG_BURGER_MENU 9 // # Elems total on page
+#define MAX_ELEM_PG_BURGER_MENU_RAM MAX_ELEM_PG_BURGER_MENU // # Elems in RAM
+
+#define MAX_ELEM_PG_PWR 9 // # Elems total on page
+#define MAX_ELEM_PG_PWR_RAM MAX_ELEM_PG_PWR // # Elems in RAM
+
+#define MAX_ELEM_PG_POPUP_CONFIRM 5 // # Elems total on page
+#define MAX_ELEM_PG_POPUP_CONFIRM_RAM MAX_ELEM_PG_POPUP_CONFIRM // # Elems in RAM
 //<ElementDefines !End!>
 
 // ------------------------------------------------
@@ -93,20 +104,18 @@ gslc_tsPage                     m_asPage[MAX_PAGE];
 //<GUI_Extra_Elements !Start!>
 gslc_tsElem                     m_asPage1Elem[MAX_ELEM_PG_MAIN_RAM];
 gslc_tsElemRef                  m_asPage1ElemRef[MAX_ELEM_PG_MAIN];
-gslc_tsElem                     m_asKeypadNumElem[1];
-gslc_tsElemRef                  m_asKeypadNumElemRef[1];
-gslc_tsElem                     m_asKeypadAlphaElem[1];
-gslc_tsElemRef                  m_asKeypadAlphaElemRef[1];
-gslc_tsXKeyPad                  m_sKeyPadNum;
-gslc_tsXKeyPad                  m_sKeyPadAlpha;
-gslc_tsXSpinner                 m_sXSpinner1;
-gslc_tsXRingGauge               m_sXRingGauge1;
-gslc_tsXProgress                m_sXBarGauge1;
-gslc_tsXSlider                  m_sXSlider1;
-gslc_tsXTogglebtn               m_asXToggle1;
-gslc_tsXCheckbox                m_asXCheck1;
-gslc_tsXCheckbox                m_asXRadio1;
-gslc_tsXRamp                    m_sXRampGauge1;
+gslc_tsElem                     m_asPopup5Elem[MAX_ELEM_PG_BURGER_MENU_RAM];
+gslc_tsElemRef                  m_asPopup5ElemRef[MAX_ELEM_PG_BURGER_MENU];
+gslc_tsElem                     m_asPopup6Elem[MAX_ELEM_PG_PWR_RAM];
+gslc_tsElemRef                  m_asPopup6ElemRef[MAX_ELEM_PG_PWR];
+gslc_tsElem                     m_asPopup7Elem[MAX_ELEM_PG_POPUP_CONFIRM_RAM];
+gslc_tsElemRef                  m_asPopup7ElemRef[MAX_ELEM_PG_POPUP_CONFIRM];
+gslc_tsXSlider                  m_sXSlider2;
+gslc_tsXToggleImgbtn            m_sToggleImg32;
+gslc_tsXToggleImgbtn            m_sToggleImg29;
+gslc_tsXSlider                  m_sXSlider3;
+gslc_tsXTogglebtn               m_asXToggle10;
+gslc_tsXTogglebtn               m_asXToggle7;
 
 #define MAX_STR                 100
 
@@ -118,18 +127,14 @@ gslc_tsXRamp                    m_sXRampGauge1;
 
 // Element References for direct access
 //<Extern_References !Start!>
-extern gslc_tsElemRef* m_pElemCBCheckBox;
-extern gslc_tsElemRef* m_pElemInTxt1;
-extern gslc_tsElemRef* m_pElemProgress1;
-extern gslc_tsElemRef* m_pElemRBRadioButton;
-extern gslc_tsElemRef* m_pElemRamp1;
-extern gslc_tsElemRef* m_pElemSlider1;
-extern gslc_tsElemRef* m_pElemSpinner1;
-extern gslc_tsElemRef* m_pElemToggle1;
-extern gslc_tsElemRef* m_pElemVal1;
-extern gslc_tsElemRef* m_pElemXRingGauge1;
-extern gslc_tsElemRef* m_pElemKeyPadNum;
-extern gslc_tsElemRef* m_pElemKeyPadAlpha;
+extern gslc_tsElemRef* m_pElemOutTxt11;
+extern gslc_tsElemRef* m_pElemOutTxt8;
+extern gslc_tsElemRef* m_pElemSlider2;
+extern gslc_tsElemRef* m_pElemSlider2_3;
+extern gslc_tsElemRef* m_pElemToggle2_7;
+extern gslc_tsElemRef* m_pElemToggle2_7_10;
+extern gslc_tsElemRef* m_pElemToggleImg29;
+extern gslc_tsElemRef* m_pElemToggleImg32;
 //<Extern_References !End!>
 
 // Define debug message function
@@ -160,13 +165,15 @@ void InitGUIslice_gen()
   // Load Fonts
   // ------------------------------------------------
 //<Load_Fonts !Start!>
-    if (!gslc_FontSet(&m_gui,E_BUILTIN5X8,GSLC_FONTREF_PTR,NULL,1)) { return; }
+    if (!gslc_FontSet(&m_gui,E_BUILTIN10X16,GSLC_FONTREF_PTR,NULL,2)) { return; }
+    if (!gslc_FontSet(&m_gui,E_BUILTIN15X24,GSLC_FONTREF_PTR,NULL,3)) { return; }
 //<Load_Fonts !End!>
 
 //<InitGUI !Start!>
   gslc_PageAdd(&m_gui,E_PG_MAIN,m_asPage1Elem,MAX_ELEM_PG_MAIN_RAM,m_asPage1ElemRef,MAX_ELEM_PG_MAIN);
-  gslc_PageAdd(&m_gui,E_POP_KEYPAD_NUM,m_asKeypadNumElem,1,m_asKeypadNumElemRef,1);  // KeyPad
-  gslc_PageAdd(&m_gui,E_POP_KEYPAD_ALPHA,m_asKeypadAlphaElem,1,m_asKeypadAlphaElemRef,1);  // KeyPad
+  gslc_PageAdd(&m_gui,E_PG_BURGER_MENU,m_asPopup5Elem,MAX_ELEM_PG_BURGER_MENU_RAM,m_asPopup5ElemRef,MAX_ELEM_PG_BURGER_MENU);
+  gslc_PageAdd(&m_gui,E_PG_PWR,m_asPopup6Elem,MAX_ELEM_PG_PWR_RAM,m_asPopup6ElemRef,MAX_ELEM_PG_PWR);
+  gslc_PageAdd(&m_gui,E_PG_POPUP_CONFIRM,m_asPopup7Elem,MAX_ELEM_PG_POPUP_CONFIRM_RAM,m_asPopup7ElemRef,MAX_ELEM_PG_POPUP_CONFIRM);
 
   // NOTE: The current page defaults to the first page added. Here we explicitly
   //       ensure that the main page is the correct page no matter the add order.
@@ -178,111 +185,215 @@ void InitGUIslice_gen()
   // -----------------------------------
   // PAGE: E_PG_MAIN
   
+   
+  // Create E_ELEM_MENU_BOX box
+  pElemRef = gslc_ElemCreateBox(&m_gui,E_ELEM_MENU_BOX,E_PG_MAIN,(gslc_tsRect){0,0,320,240});
+  gslc_ElemSetCol(&m_gui,pElemRef,GSLC_COL_BLACK,GSLC_COL_BLACK,GSLC_COL_BLACK);
   
-  // create E_ELEM_BTN1 button with text label
-  pElemRef = gslc_ElemCreateBtnTxt(&m_gui,E_ELEM_BTN1,E_PG_MAIN,
-    (gslc_tsRect){14,12,80,40},(char*)"",0,E_BUILTIN5X8,&CbBtnCommon);
+  // Create E_ELEM_IMAGEBTN_BACK button with image label
+  pElemRef = gslc_ElemCreateBtnImg(&m_gui,E_ELEM_IMAGEBTN_BACK,E_PG_MAIN,(gslc_tsRect){270,100,40,40},
+          gslc_GetImageFromProg((const unsigned char*)back_40x40px,GSLC_IMGREF_FMT_RAW1),
+          gslc_GetImageFromProg((const unsigned char*)back_40x40px,GSLC_IMGREF_FMT_RAW1),
+          &CbBtnCommon);
+
+  // Create slider E_ELEM_SLIDER2 
+  pElemRef = gslc_ElemXSliderCreate(&m_gui,E_ELEM_SLIDER2,E_PG_MAIN,&m_sXSlider2,
+          (gslc_tsRect){210,10,40,180},0,100,0,10,true);
+  gslc_ElemXSliderSetStyle(&m_gui,pElemRef,true,GSLC_COL_WHITE,5,10,GSLC_COL_WHITE);
+  gslc_ElemXSliderSetPosFunc(&m_gui,pElemRef,&CbSlidePos);
+  gslc_ElemSetCol(&m_gui,pElemRef,GSLC_COL_WHITE,GSLC_COL_BLACK,GSLC_COL_BLACK);
+  m_pElemSlider2 = pElemRef;
+  
+  // Create E_ELEM_IMAGEBTN_VOLUME button with image label
+  pElemRef = gslc_ElemXToggleImgbtnCreate(&m_gui,E_ELEM_IMAGEBTN_VOLUME,E_PG_MAIN,&m_sToggleImg32,(gslc_tsRect){210,190,40,40},
+          gslc_GetImageFromProg((const unsigned char*)volume_loud_icon2_40x40px,GSLC_IMGREF_FMT_RAW1),
+          gslc_GetImageFromProg((const unsigned char*)volume_loud_icon2_40x40px,GSLC_IMGREF_FMT_RAW1),
+          false,&CbBtnCommon);
+  m_pElemToggleImg32 = pElemRef;
+  
+  // Create E_ELEM_IMAGEBTN_MIC button with image label
+  pElemRef = gslc_ElemXToggleImgbtnCreate(&m_gui,E_ELEM_IMAGEBTN_MIC,E_PG_MAIN,&m_sToggleImg29,(gslc_tsRect){270,190,40,40},
+          gslc_GetImageFromProg((const unsigned char*)mic_on_icon_40x40px,GSLC_IMGREF_FMT_RAW1),
+          gslc_GetImageFromProg((const unsigned char*)mic_on_icon_40x40px,GSLC_IMGREF_FMT_RAW1),
+          false,&CbBtnCommon);
+  m_pElemToggleImg29 = pElemRef;
+
+  // Create slider E_ELEM_SLIDER3 
+  pElemRef = gslc_ElemXSliderCreate(&m_gui,E_ELEM_SLIDER3,E_PG_MAIN,&m_sXSlider3,
+          (gslc_tsRect){150,10,40,180},0,100,0,10,true);
+  gslc_ElemXSliderSetStyle(&m_gui,pElemRef,true,GSLC_COL_WHITE,5,10,GSLC_COL_WHITE);
+  gslc_ElemXSliderSetPosFunc(&m_gui,pElemRef,&CbSlidePos);
+  gslc_ElemSetCol(&m_gui,pElemRef,GSLC_COL_WHITE,GSLC_COL_BLACK,GSLC_COL_BLACK);
+  m_pElemSlider2_3 = pElemRef;
+  
+  // Create E_ELEM_IMAGEBTN_BRIGHTNESS button with image label
+  pElemRef = gslc_ElemCreateBtnImg(&m_gui,E_ELEM_IMAGEBTN_BRIGHTNESS,E_PG_MAIN,(gslc_tsRect){150,190,40,40},
+          gslc_GetImageFromProg((const unsigned char*)auto_bright_40x40px,GSLC_IMGREF_FMT_RAW1),
+          gslc_GetImageFromProg((const unsigned char*)auto_bright_40x40px,GSLC_IMGREF_FMT_RAW1),
+          &CbBtnCommon);
+  
+  // Create E_ELEM_IMAGEBTN5 button with image label
+  pElemRef = gslc_ElemCreateBtnImg(&m_gui,E_ELEM_IMAGEBTN5,E_PG_MAIN,(gslc_tsRect){10,70,130,130},
+          gslc_GetImageFromProg((const unsigned char*)rsc_130x130,GSLC_IMGREF_FMT_RAW1),
+          gslc_GetImageFromProg((const unsigned char*)rsc_130x130,GSLC_IMGREF_FMT_RAW1),
+          &CbBtnCommon);
+  gslc_ElemSetFillEn(&m_gui,pElemRef,false);
+  
+  // Create E_ELEM_IMAGEBTN_BURGER button with image label
+  pElemRef = gslc_ElemCreateBtnImg(&m_gui,E_ELEM_IMAGEBTN_BURGER,E_PG_MAIN,(gslc_tsRect){270,10,40,40},
+          gslc_GetImageFromProg((const unsigned char*)burger_icon_40x40px,GSLC_IMGREF_FMT_RAW1),
+          gslc_GetImageFromProg((const unsigned char*)burger_icon_40x40px,GSLC_IMGREF_FMT_RAW1),
+          &CbBtnCommon);
+  
+  // Create E_ELEM_IMAGEBTN_PWR button with image label
+  pElemRef = gslc_ElemCreateBtnImg(&m_gui,E_ELEM_IMAGEBTN_PWR,E_PG_MAIN,(gslc_tsRect){10,10,40,40},
+          gslc_GetImageFromProg((const unsigned char*)power_icon_40x40px,GSLC_IMGREF_FMT_RAW1),
+          gslc_GetImageFromProg((const unsigned char*)power_icon_40x40px,GSLC_IMGREF_FMT_RAW1),
+          &CbBtnCommon);
+
+  // -----------------------------------
+  // PAGE: E_PG_BURGER_MENU
+  
    
   // Create E_ELEM_BOX1 box
-  pElemRef = gslc_ElemCreateBox(&m_gui,E_ELEM_BOX1,E_PG_MAIN,(gslc_tsRect){187,4,126,119});
-
-  // Add Spinner element
-  pElemRef = gslc_ElemXSpinnerCreate(&m_gui,E_ELEM_SPINNER1,E_PG_MAIN,&m_sXSpinner1,
-    (gslc_tsRect){176,205,136,32},0,99,0,1,E_BUILTIN5X8,20,&CbSpinner);
-  m_pElemSpinner1 = pElemRef;
-
-  // Create ring gauge E_ELEM_RINGGAUGE1 
-  static char m_sRingText1[11] = "";
-  pElemRef = gslc_ElemXRingGaugeCreate(&m_gui,E_ELEM_RINGGAUGE1,E_PG_MAIN,&m_sXRingGauge1,
-          (gslc_tsRect){201,17,100,100},
-          (char*)m_sRingText1,11,E_BUILTIN5X8);
-  gslc_ElemXRingGaugeSetValRange(&m_gui, pElemRef, 0, 100);
-  gslc_ElemXRingGaugeSetVal(&m_gui, pElemRef, 0); // Set initial value
-  m_pElemXRingGauge1 = pElemRef;
+  pElemRef = gslc_ElemCreateBox(&m_gui,E_ELEM_BOX1,E_PG_BURGER_MENU,(gslc_tsRect){10,10,300,220});
+  gslc_ElemSetRoundEn(&m_gui, pElemRef, true);
   
-  // Create E_ELEM_TEXT1 text label
-  pElemRef = gslc_ElemCreateTxt(&m_gui,E_ELEM_TEXT1,E_PG_MAIN,(gslc_tsRect){111,14,60,10},
-    (char*)"",0,E_BUILTIN5X8);
-
-  // Create progress bar E_ELEM_PROGRESS1 
-  pElemRef = gslc_ElemXProgressCreate(&m_gui,E_ELEM_PROGRESS1,E_PG_MAIN,&m_sXBarGauge1,
-    (gslc_tsRect){200,178,111,18},0,100,0,GSLC_COL_GREEN,false);
-  m_pElemProgress1 = pElemRef;
-
-  // Create slider E_ELEM_SLIDER1 
-  pElemRef = gslc_ElemXSliderCreate(&m_gui,E_ELEM_SLIDER1,E_PG_MAIN,&m_sXSlider1,
-          (gslc_tsRect){205,136,110,37},0,100,0,5,false);
-  gslc_ElemXSliderSetStyle(&m_gui,pElemRef,false,GSLC_COL_BLUE,10,5,GSLC_COL_BLUE);
-  gslc_ElemXSliderSetPosFunc(&m_gui,pElemRef,&CbSlidePos);
-  m_pElemSlider1 = pElemRef;
+  // Create E_ELEM_BTN_MENU_CLOSE button with image label
+  pElemRef = gslc_ElemCreateBtnImg(&m_gui,E_ELEM_BTN_MENU_CLOSE,E_PG_BURGER_MENU,(gslc_tsRect){270,100,40,40},
+          gslc_GetImageFromProg((const unsigned char*)back_40x40px,GSLC_IMGREF_FMT_RAW1),
+          gslc_GetImageFromProg((const unsigned char*)back_40x40px,GSLC_IMGREF_FMT_RAW1),
+          &CbBtnCommon);
   
-  // Create toggle button E_ELEM_TOGGLE1
-  pElemRef = gslc_ElemXTogglebtnCreate(&m_gui,E_ELEM_TOGGLE1,E_PG_MAIN,&m_asXToggle1,
-    (gslc_tsRect){123,162,64,24},GSLC_COL_GRAY,GSLC_COL_BLUE_DK2,GSLC_COL_GRAY_LT3,
+  // Create toggle button E_ELEM_TOGGLE_THEME
+  pElemRef = gslc_ElemXTogglebtnCreate(&m_gui,E_ELEM_TOGGLE_THEME,E_PG_BURGER_MENU,&m_asXToggle10,
+    (gslc_tsRect){180,20,60,30},GSLC_COL_WHITE,GSLC_COL_WHITE,GSLC_COL_BLACK,
     true,false,&CbBtnCommon);
-  m_pElemToggle1 = pElemRef;
+  m_pElemToggle2_7_10 = pElemRef;
+  
+  // Create E_ELEM_TEXT_THEME text label
+  pElemRef = gslc_ElemCreateTxt(&m_gui,E_ELEM_TEXT_THEME,E_PG_BURGER_MENU,(gslc_tsRect){240,20,60,30},
+    (char*)"Theme",0,E_BUILTIN10X16);
+  gslc_ElemSetTxtCol(&m_gui,pElemRef,GSLC_COL_WHITE);
+  
+  // Create toggle button E_ELEM_TOGGLE_DEBUG
+  pElemRef = gslc_ElemXTogglebtnCreate(&m_gui,E_ELEM_TOGGLE_DEBUG,E_PG_BURGER_MENU,&m_asXToggle7,
+    (gslc_tsRect){20,20,60,30},GSLC_COL_WHITE,GSLC_COL_WHITE,GSLC_COL_BLACK,
+    true,false,&CbBtnCommon);
+  m_pElemToggle2_7 = pElemRef;
+  
+  // Create E_ELEM_TEXT_DEBUG_TOGGLE text label
+  pElemRef = gslc_ElemCreateTxt(&m_gui,E_ELEM_TEXT_DEBUG_TOGGLE,E_PG_BURGER_MENU,(gslc_tsRect){80,20,60,30},
+    (char*)"Debug",0,E_BUILTIN10X16);
+  gslc_ElemSetTxtCol(&m_gui,pElemRef,GSLC_COL_WHITE);
+  
+  // Create E_ELEM_TEXT_STATS runtime modifiable text
+  static char m_sDisplayText8[121] = "Stats";
+  pElemRef = gslc_ElemCreateTxt(&m_gui,E_ELEM_TEXT_STATS,E_PG_BURGER_MENU,(gslc_tsRect){20,70,240,150},
+    (char*)m_sDisplayText8,121,E_BUILTIN10X16);
+  gslc_ElemSetFrameEn(&m_gui,pElemRef,true);
+  gslc_ElemSetTxtCol(&m_gui,pElemRef,GSLC_COL_WHITE);
+  gslc_ElemSetCol(&m_gui,pElemRef,GSLC_COL_WHITE,GSLC_COL_BLACK,GSLC_COL_BLACK);
+  m_pElemOutTxt8 = pElemRef;
+
+  // Create E_DRAW_LINE1 line 
+  pElemRef = gslc_ElemCreateLine(&m_gui,E_DRAW_LINE1,E_PG_BURGER_MENU,10,60,310,60);
+  gslc_ElemSetCol(&m_gui,pElemRef,GSLC_COL_BLACK,GSLC_COL_WHITE,GSLC_COL_WHITE);
+
+  // Create E_DRAW_LINE2 line 
+  pElemRef = gslc_ElemCreateLine(&m_gui,E_DRAW_LINE2,E_PG_BURGER_MENU,160,10,160,60);
+  gslc_ElemSetCol(&m_gui,pElemRef,GSLC_COL_BLACK,GSLC_COL_WHITE,GSLC_COL_WHITE);
+
+  // -----------------------------------
+  // PAGE: E_PG_PWR
+  
    
-  // create checkbox E_ELEM_CHECK1
-  pElemRef = gslc_ElemXCheckboxCreate(&m_gui,E_ELEM_CHECK1,E_PG_MAIN,&m_asXCheck1,
-    (gslc_tsRect){120,201,31,31},false,GSLCX_CHECKBOX_STYLE_X,GSLC_COL_ORANGE,false);
-  gslc_ElemXCheckboxSetStateFunc(&m_gui, pElemRef, &CbCheckbox);
-  m_pElemCBCheckBox = pElemRef;
+  // Create E_ELEM_PWR_BOX box
+  pElemRef = gslc_ElemCreateBox(&m_gui,E_ELEM_PWR_BOX,E_PG_PWR,(gslc_tsRect){10,10,300,220});
+  gslc_ElemSetRoundEn(&m_gui, pElemRef, true);
+  gslc_ElemSetCol(&m_gui,pElemRef,GSLC_COL_WHITE,GSLC_COL_BLACK,GSLC_COL_BLACK);
   
-  // Create radio button E_ELEM_RADIO1
-  pElemRef = gslc_ElemXCheckboxCreate(&m_gui,E_ELEM_RADIO1,E_PG_MAIN,&m_asXRadio1,
-    (gslc_tsRect){234,49,34,34},true,GSLCX_CHECKBOX_STYLE_ROUND,GSLC_COL_ORANGE,false);
-  gslc_ElemXCheckboxSetStateFunc(&m_gui, pElemRef, &CbCheckbox);
-  m_pElemRBRadioButton = pElemRef;
+  // Create E_ELEM_IMAGEBTN_PWR_CLOSE button with image label
+  pElemRef = gslc_ElemCreateBtnImg(&m_gui,E_ELEM_IMAGEBTN_PWR_CLOSE,E_PG_PWR,(gslc_tsRect){270,100,40,40},
+          gslc_GetImageFromProg((const unsigned char*)back_40x40px,GSLC_IMGREF_FMT_RAW1),
+          gslc_GetImageFromProg((const unsigned char*)back_40x40px,GSLC_IMGREF_FMT_RAW1),
+          &CbBtnCommon);
   
-  // create E_ELEM_BTN2 button with text label
-  pElemRef = gslc_ElemCreateBtnTxt(&m_gui,E_ELEM_BTN2,E_PG_MAIN,
-    (gslc_tsRect){108,30,51,29},(char*)"",0,E_BUILTIN5X8,&CbBtnCommon);
+  // create E_ELEM_BTN5 button with text label
+  pElemRef = gslc_ElemCreateBtnTxt(&m_gui,E_ELEM_BTN5,E_PG_PWR,
+    (gslc_tsRect){20,20,110,40},(char*)"Poweroff",0,E_BUILTIN10X16,&CbBtnCommon);
+  gslc_ElemSetCol(&m_gui,pElemRef,GSLC_COL_WHITE,GSLC_COL_BLACK,GSLC_COL_BLACK);
+  gslc_ElemSetRoundEn(&m_gui, pElemRef, true);
+  
+  // create E_ELEM_BTN6 button with text label
+  pElemRef = gslc_ElemCreateBtnTxt(&m_gui,E_ELEM_BTN6,E_PG_PWR,
+    (gslc_tsRect){190,20,110,40},(char*)"Reboot",0,E_BUILTIN10X16,&CbBtnCommon);
+  gslc_ElemSetCol(&m_gui,pElemRef,GSLC_COL_WHITE,GSLC_COL_BLACK,GSLC_COL_BLACK);
+  gslc_ElemSetRoundEn(&m_gui, pElemRef, true);
 
-  // Create progress bar E_ELEM_RAMPGAUGE1 
-  pElemRef = gslc_ElemXRampCreate(&m_gui,E_ELEM_RAMPGAUGE1,E_PG_MAIN,&m_sXRampGauge1,
-    (gslc_tsRect){9,156,100,80},0,100,
-    0,GSLC_COL_YELLOW,false);
-  m_pElemRamp1 = pElemRef;
+  // Create E_DRAW_LINE3 line 
+  pElemRef = gslc_ElemCreateLine(&m_gui,E_DRAW_LINE3,E_PG_PWR,10,120,270,120);
+  gslc_ElemSetCol(&m_gui,pElemRef,GSLC_COL_BLACK,GSLC_COL_GRAY_LT2,GSLC_COL_GRAY_LT2);
   
-  // Create E_ELEM_TEXTINPUT1 text input field
-  static char m_sInputText1[11] = "";
-  pElemRef = gslc_ElemCreateTxt(&m_gui,E_ELEM_TEXTINPUT1,E_PG_MAIN,(gslc_tsRect){12,70,86,72},
-    (char*)m_sInputText1,11,E_BUILTIN5X8);
-  gslc_ElemSetTxtMargin(&m_gui,pElemRef,5);
-  gslc_ElemSetFrameEn(&m_gui,pElemRef,true);
-  gslc_ElemSetClickEn(&m_gui, pElemRef, true);
-  gslc_ElemSetTouchFunc(&m_gui, pElemRef, &CbBtnCommon);
-  m_pElemInTxt1 = pElemRef;
+  // create E_ELEM_BTN10 button with text label
+  pElemRef = gslc_ElemCreateBtnTxt(&m_gui,E_ELEM_BTN10,E_PG_PWR,
+    (gslc_tsRect){20,180,110,40},(char*)"Reset",0,E_BUILTIN10X16,&CbBtnCommon);
+  gslc_ElemSetCol(&m_gui,pElemRef,GSLC_COL_WHITE,GSLC_COL_BLACK,GSLC_COL_BLACK);
+  gslc_ElemSetRoundEn(&m_gui, pElemRef, true);
   
-  // Create E_ELEM_NUMINPUT1 numeric input field
-  static char m_sInputNumber1[6] = "";
-  pElemRef = gslc_ElemCreateTxt(&m_gui,E_ELEM_NUMINPUT1,E_PG_MAIN,(gslc_tsRect){116,70,61,76},
-    (char*)m_sInputNumber1,6,E_BUILTIN5X8);
-  gslc_ElemSetTxtMargin(&m_gui,pElemRef,5);
-  gslc_ElemSetFrameEn(&m_gui,pElemRef,true);
-  gslc_ElemSetClickEn(&m_gui, pElemRef, true);
-  gslc_ElemSetTouchFunc(&m_gui, pElemRef, &CbBtnCommon);
-  m_pElemVal1 = pElemRef;
-
-  // -----------------------------------
-  // PAGE: E_POP_KEYPAD_NUM
+  // create E_ELEM_BTN11 button with text label
+  pElemRef = gslc_ElemCreateBtnTxt(&m_gui,E_ELEM_BTN11,E_PG_PWR,
+    (gslc_tsRect){190,180,110,40},(char*)"Reboot",0,E_BUILTIN10X16,&CbBtnCommon);
+  gslc_ElemSetCol(&m_gui,pElemRef,GSLC_COL_WHITE,GSLC_COL_BLACK,GSLC_COL_BLACK);
+  gslc_ElemSetRoundEn(&m_gui, pElemRef, true);
   
-  static gslc_tsXKeyPadCfg_Num sCfg;
-  sCfg = gslc_ElemXKeyPadCfgInit_Num();
-  gslc_ElemXKeyPadCfgSetFloatEn_Num(&sCfg, true);
-  gslc_ElemXKeyPadCfgSetSignEn_Num(&sCfg, true);
-  m_pElemKeyPadNum = gslc_ElemXKeyPadCreate_Num(&m_gui, E_ELEM_KEYPAD_NUM, E_POP_KEYPAD_NUM,
-    &m_sKeyPadNum, 65, 80, E_BUILTIN5X8, &sCfg);
-  gslc_ElemXKeyPadValSetCb(&m_gui, m_pElemKeyPadNum, &CbKeypad);
+  // Create E_ELEM_TEXT9 text label
+  pElemRef = gslc_ElemCreateTxt(&m_gui,E_ELEM_TEXT9,E_PG_PWR,(gslc_tsRect){50,70,216,24},
+    (char*)"Raspberry Pi",0,E_BUILTIN15X24);
+  gslc_ElemSetTxtCol(&m_gui,pElemRef,GSLC_COL_WHITE);
+  gslc_ElemSetCol(&m_gui,pElemRef,GSLC_COL_WHITE,GSLC_COL_BLACK,GSLC_COL_BLACK);
+  
+  // Create E_ELEM_TEXT10 text label
+  pElemRef = gslc_ElemCreateTxt(&m_gui,E_ELEM_TEXT10,E_PG_PWR,(gslc_tsRect){50,150,198,24},
+    (char*)"Front panel",0,E_BUILTIN15X24);
+  gslc_ElemSetTxtCol(&m_gui,pElemRef,GSLC_COL_WHITE);
+  gslc_ElemSetCol(&m_gui,pElemRef,GSLC_COL_WHITE,GSLC_COL_BLACK,GSLC_COL_BLACK);
 
   // -----------------------------------
-  // PAGE: E_POP_KEYPAD_ALPHA
+  // PAGE: E_PG_POPUP_CONFIRM
   
-  static gslc_tsXKeyPadCfg_Alpha sCfgTx;
-  sCfgTx = gslc_ElemXKeyPadCfgInit_Alpha();
-  m_pElemKeyPadAlpha = gslc_ElemXKeyPadCreate_Alpha(&m_gui, E_ELEM_KEYPAD_ALPHA, E_POP_KEYPAD_ALPHA,
-    &m_sKeyPadAlpha, 65, 80, E_BUILTIN5X8, &sCfgTx);
-  gslc_ElemXKeyPadValSetCb(&m_gui, m_pElemKeyPadAlpha, &CbKeypad);
+   
+  // Create E_ELEM_BOX_CONFIRM box
+  pElemRef = gslc_ElemCreateBox(&m_gui,E_ELEM_BOX_CONFIRM,E_PG_POPUP_CONFIRM,(gslc_tsRect){10,50,300,130});
+  gslc_ElemSetRoundEn(&m_gui, pElemRef, true);
+  
+  // Create E_ELEM_IMAGEBTN_CONFIRM_BACK button with image label
+  pElemRef = gslc_ElemCreateBtnImg(&m_gui,E_ELEM_IMAGEBTN_CONFIRM_BACK,E_PG_POPUP_CONFIRM,(gslc_tsRect){270,100,40,40},
+          gslc_GetImageFromProg((const unsigned char*)back_40x40px,GSLC_IMGREF_FMT_RAW1),
+          gslc_GetImageFromProg((const unsigned char*)back_40x40px,GSLC_IMGREF_FMT_RAW1),
+          &CbBtnCommon);
+  
+  // Create E_ELEM_TEXT_CONFIRM runtime modifiable text
+  static char m_sDisplayText11[51] = "Message";
+  pElemRef = gslc_ElemCreateTxt(&m_gui,E_ELEM_TEXT_CONFIRM,E_PG_POPUP_CONFIRM,(gslc_tsRect){20,60,240,60},
+    (char*)m_sDisplayText11,51,E_BUILTIN10X16);
+  gslc_ElemSetTxtAlign(&m_gui,pElemRef,GSLC_ALIGN_MID_MID);
+  gslc_ElemSetTxtCol(&m_gui,pElemRef,GSLC_COL_WHITE);
+  m_pElemOutTxt11 = pElemRef;
+  
+  // create E_ELEM_BTN_YES button with text label
+  pElemRef = gslc_ElemCreateBtnTxt(&m_gui,E_ELEM_BTN_YES,E_PG_POPUP_CONFIRM,
+    (gslc_tsRect){30,130,90,30},(char*)"Yes",0,E_BUILTIN10X16,&CbBtnCommon);
+  gslc_ElemSetCol(&m_gui,pElemRef,GSLC_COL_WHITE,GSLC_COL_BLACK,GSLC_COL_BLACK);
+  gslc_ElemSetRoundEn(&m_gui, pElemRef, true);
+  gslc_ElemSetFillEn(&m_gui,pElemRef,false);
+  
+  // create E_ELEM_BTN_CANCEL button with text label
+  pElemRef = gslc_ElemCreateBtnTxt(&m_gui,E_ELEM_BTN_CANCEL,E_PG_POPUP_CONFIRM,
+    (gslc_tsRect){160,130,90,30},(char*)"Cancel",0,E_BUILTIN10X16,&CbBtnCommon);
+  gslc_ElemSetCol(&m_gui,pElemRef,GSLC_COL_WHITE,GSLC_COL_BLACK,GSLC_COL_BLACK);
+  gslc_ElemSetRoundEn(&m_gui, pElemRef, true);
+  gslc_ElemSetFillEn(&m_gui,pElemRef,false);
 //<InitGUI !End!>
 
 //<Startup !Start!>
