@@ -1,6 +1,7 @@
 #include "test_GSLC.h"
 #include "UIManager.h"
 #include "Config.h"
+#include "version.h"
 
 
 // ------------------------------------------------
@@ -17,11 +18,33 @@ gslc_tsElemRef* m_pElemToggle2_7  = NULL;
 gslc_tsElemRef* m_pElemToggle2_7_10= NULL;
 gslc_tsElemRef* m_pElemToggleImg29= NULL;
 gslc_tsElemRef* m_pElemToggleImg32= NULL;
+
+extern "C" const unsigned short volume_low_icon2_40x40px[]  PROGMEM;
+extern "C" const unsigned short volume_mute_icon2_40x40px[] PROGMEM;
+extern "C" const unsigned short mute_on_icon_40x40px[]      PROGMEM;
+extern "C" const unsigned short bright_40x40px[]            PROGMEM;
+
 //<Save_References !End!>
 
 // Confirm popup: pending command stashed by destructive buttons, executed by YES
 #define PENDING_CMD_MAX 24
+
 static char m_acPendingCmd[PENDING_CMD_MAX] = {0};
+static bool _muted = false;
+static bool _micMuted = false;
+static int16_t _volumeLevel = 50;
+static const void* _lastVolIcon = nullptr;
+
+// Cached refs — populated by initMenuIcons()
+static gslc_tsElemRef* _refVolume = nullptr;
+static gslc_tsElemRef* _refMic    = nullptr;
+static gslc_tsElemRef* _refBright = nullptr;
+
+
+static gslc_tsElemRef* _refStatsUp   = nullptr;
+static gslc_tsElemRef* _refStatsHeap = nullptr;
+static char _bufStatsUp[24]   = "";
+static char _bufStatsHeap[24] = "";
 
 // Routes host_* commands to Serial; everything else to the local dispatch table
 static void executePending() {
@@ -34,6 +57,74 @@ static void executePending() {
     }
 }
 
+
+static void applyIcon(gslc_tsElemRef* ref, const void* iconArr) {
+    if (!ref) return;
+    gslc_tsImgRef img = gslc_GetImageFromProg((const unsigned char*)iconArr, GSLC_IMGREF_FMT_RAW1);
+    gslc_ElemSetImage(&m_gui, ref, img, img);
+}
+
+static void refreshVolumeIcon() {
+    const void* iconArr;
+    if (_muted)                  iconArr = volume_mute_icon2_40x40px;
+    else if (_volumeLevel > 50)  iconArr = volume_loud_icon2_40x40px;
+    else                         iconArr = volume_low_icon2_40x40px;
+    if (iconArr == _lastVolIcon) return;
+    _lastVolIcon = iconArr;
+    applyIcon(_refVolume, iconArr);
+}
+
+void initMenuIcons() {
+  _refVolume = gslc_PageFindElemById(&m_gui, E_PG_MAIN, E_ELEM_IMAGEBTN_VOLUME);
+  _refMic    = gslc_PageFindElemById(&m_gui, E_PG_MAIN, E_ELEM_IMAGEBTN_MIC);
+  _refBright = gslc_PageFindElemById(&m_gui, E_PG_MAIN, E_ELEM_IMAGEBTN_BRIGHTNESS);
+  refreshVolumeIcon();
+  applyIcon(_refMic, mic_on_icon_40x40px);
+  applyIcon(_refBright, config.autoBright ? auto_bright_40x40px : bright_40x40px);
+  // Programmatically add two more stats lines on the burger menu page
+  _refStatsUp = gslc_ElemCreateTxt(&m_gui, GSLC_ID_AUTO, E_PG_BURGER_MENU,
+      (gslc_tsRect){20, 110, 240, 30}, _bufStatsUp, sizeof(_bufStatsUp), E_BUILTIN10X16);
+  gslc_ElemSetTxtCol(&m_gui, _refStatsUp, GSLC_COL_WHITE);
+  gslc_ElemSetCol(&m_gui, _refStatsUp, GSLC_COL_BLACK, GSLC_COL_BLACK, GSLC_COL_BLACK);
+
+  _refStatsHeap = gslc_ElemCreateTxt(&m_gui, GSLC_ID_AUTO, E_PG_BURGER_MENU,
+      (gslc_tsRect){20, 150, 240, 30}, _bufStatsHeap, sizeof(_bufStatsHeap), E_BUILTIN10X16);
+  gslc_ElemSetTxtCol(&m_gui, _refStatsHeap, GSLC_COL_WHITE);
+  gslc_ElemSetCol(&m_gui, _refStatsHeap, GSLC_COL_BLACK, GSLC_COL_BLACK, GSLC_COL_BLACK);
+}
+
+void refreshStatsText() {
+    if (!m_pElemOutTxt8 || !_refStatsUp || !_refStatsHeap) return;
+
+    // Shorten FW_VERSION: keep "v<tag>-<commits>", drop "-g<hash>-dirty"; mark dirty with "+"
+    char shortVer[20];
+    const char* ver = FW_VERSION;
+    const char* hashMark = strstr(ver, "-g");
+    int keepLen = hashMark ? (int)(hashMark - ver) : (int)strlen(ver);
+    if (keepLen > (int)sizeof(shortVer) - 2) keepLen = sizeof(shortVer) - 2;
+    memcpy(shortVer, ver, keepLen);
+    shortVer[keepLen] = '\0';
+    bool dirty = strstr(ver, "-dirty") != nullptr;
+    if (dirty && keepLen + 1 < (int)sizeof(shortVer)) {
+        shortVer[keepLen] = '+';
+        shortVer[keepLen + 1] = '\0';
+    }
+
+    static char buf[40];
+    uint32_t s  = millis() / 1000;
+    uint32_t h  = s / 3600;
+    uint32_t mn = (s % 3600) / 60;
+    uint32_t sc = s % 60;
+
+    snprintf(buf, sizeof(buf), "fw  %s", shortVer);
+    gslc_ElemSetTxtStr(&m_gui, m_pElemOutTxt8, buf);
+
+    snprintf(buf, sizeof(buf), "up  %02u:%02u:%02u", (unsigned)h, (unsigned)mn, (unsigned)sc);
+    gslc_ElemSetTxtStr(&m_gui, _refStatsUp, buf);
+
+    snprintf(buf, sizeof(buf), "heap  %u", (unsigned)ESP.getFreeHeap());
+    gslc_ElemSetTxtStr(&m_gui, _refStatsHeap, buf);
+}
 
 // ------------------------------------------------
 // Callback Methods
@@ -51,15 +142,26 @@ bool CbBtnCommon(void* pvGui,void *pvElemRef,gslc_teTouch eTouch,int16_t nX,int1
     switch (pElem->nId) {
 //<Button Enums !Start!>
       case E_ELEM_IMAGEBTN_BACK:
-        // Exit via long-press only — handled in UIManager::serviceUI  
         setUIMode(MODE_FACE);
         break;
       case E_ELEM_IMAGEBTN_VOLUME:
+        _muted = !_muted;
+        Serial.println("host_mute");
+        refreshVolumeIcon();
         break;
+
       case E_ELEM_IMAGEBTN_MIC:
+        _micMuted = !_micMuted;
+        Serial.println("host_mic");
+        applyIcon(_refMic, _micMuted ? mute_on_icon_40x40px : mic_on_icon_40x40px);
         break;
-      case E_ELEM_IMAGEBTN_BRIGHTNESS:
+
+      case E_ELEM_IMAGEBTN_BRIGHTNESS: {
+        const Command* cmd = findCommand(String("auto_bright"));
+        if (cmd && cmd->set) cmd->set(config.autoBright ? "off" : "on");
+        applyIcon(_refBright, config.autoBright ? auto_bright_40x40px : bright_40x40px);
         break;
+      }
       case E_ELEM_IMAGEBTN5:    // RSC logo — returns to face per UI design
         setUIMode(MODE_FACE); // RSC logo — exit via long-press only
         break;
@@ -72,12 +174,12 @@ bool CbBtnCommon(void* pvGui,void *pvElemRef,gslc_teTouch eTouch,int16_t nX,int1
       case E_ELEM_BTN_MENU_CLOSE:
         gslc_PopupHide(&m_gui);
         break;
-      case E_ELEM_TOGGLE_THEME:
-        // TODO Add code for Toggle button ON/OFF state
-        if (gslc_ElemXTogglebtnGetState(&m_gui, m_pElemToggle2_7_10)) {
-          ;
-        }
+      case E_ELEM_TOGGLE_THEME: {
+        bool state = gslc_ElemXTogglebtnGetState(&m_gui, m_pElemToggle2_7_10);
+        const Command* cmd = findCommand(String("theme"));
+        if (cmd && cmd->set) cmd->set(state ? "light" : "dark");
         break;
+      }
       case E_ELEM_TOGGLE_DEBUG: {
         bool state = gslc_ElemXTogglebtnGetState(&m_gui, m_pElemToggle2_7);
         const Command* cmd = findCommand(String("touch_debug"));
@@ -151,8 +253,10 @@ bool CbSlidePos(void* pvGui,void* pvElemRef,int16_t nPos)
   // From the element's ID we can determine which slider was updated.
   switch (pElem->nId) {
 //<Slider Enums !Start!>
-    case E_ELEM_SLIDER2:  // volume — sends to host service
+    case E_ELEM_SLIDER2:  // volume — track + reflect in icon
+      _volumeLevel = nPos;
       Serial.printf("host_vol:%d\n", nPos);
+      if (!_muted) refreshVolumeIcon();
       break;
     case E_ELEM_SLIDER3: {  // brightness
       int16_t v = (nPos < 1) ? 1 : nPos;   // cmdSetBright requires 1-100

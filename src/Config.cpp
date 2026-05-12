@@ -65,6 +65,7 @@ static void saveConfig() {
     prefs.putBool("hudOn",          config.hudOn);
     prefs.putBool("idleAnim",       config.idleAnim);
     prefs.putUShort("menuTo",       config.menuTimeoutSec);
+    prefs.putUChar("theme",         (uint8_t)config.theme);
     prefs.end();
 }
 
@@ -87,6 +88,7 @@ void initConfig() {
     config.menuTimeoutSec = prefs.getUShort("menuTo", config.menuTimeoutSec);
     strncpy(config.mood, savedMood.c_str(), sizeof(config.mood) - 1);
     config.mood[sizeof(config.mood) - 1] = '\0';
+    config.theme = (ThemeMode)prefs.getUChar("theme", (uint8_t)config.theme);
     prefs.end();
 }
 
@@ -158,6 +160,16 @@ static void cmdSetBgColour(const String &val) {
     if (!parseColour(val, c)) { Serial.println("ERR: bad colour"); return; }
     setBackgroundColour(c); markDirty(); Serial.println("OK");
 }
+static void cmdSetTheme(const String& val) {
+    String v = val; v.toLowerCase();
+    uint16_t bg, eye;
+    if      (v == "light") { bg = 0xFFFF; eye = 0x0000; config.theme = THEME_LIGHT; }
+    else if (v == "dark")  { bg = 0x0000; eye = 0xFFFF; config.theme = THEME_DARK;  }
+    else { Serial.println("ERR: light or dark"); return; }
+    config.bgColour  = bg;  setBackgroundColour(bg);
+    config.eyeColour = eye; setEyeColour(eye);
+    markDirty(); Serial.println("OK");
+}
 static void cmdSetMood(const String &val) {
     String upper = val; upper.toUpperCase();
     if (!isKnownMood(upper)) { Serial.printf("ERR: unknown mood '%s'\n", val.c_str()); return; }
@@ -194,7 +206,9 @@ static void cmdSetMenuTimeout(const String& val) {
 static void cmdGetMenuTimeout() {
     Serial.printf("menu_timeout:   %u\n", config.menuTimeoutSec);
 }
-
+static void cmdGetTheme() {
+    Serial.printf("theme:          %s\n", config.theme == THEME_DARK ? "dark" : "light");
+}
 static void cmdSetMode(const String& val) {
     String u = val; u.toUpperCase();
     if (u == "FACE")      { setUIMode(MODE_FACE); Serial.println("OK"); }
@@ -342,6 +356,7 @@ static const Command commands[] = {
     {"bg_colour",    cmdSetBgColour,    cmdGetBgColour,    "RRGGBB hex"},
     {"bg_color",     cmdSetBgColour,    cmdGetBgColour,    nullptr},   // alias, hidden
     {"idle_anim",    cmdSetIdleAnim,    cmdGetIdleAnim,    "on|off random idle moods"},
+    {"theme",        cmdSetTheme,       cmdGetTheme,       "light | dark (preset bg+eye; use bg_colour/eye_colour for arbitrary)"},
     {"mood",         cmdSetMood,        cmdGetMood,        "NEUTRAL|HAPPY|ANGRY|SAD|EXCITED|ANNOYED|QUESTIONING|IDLE1-3"},
     {"bright",       cmdSetBright,      cmdGetBright,      "0-100 backlight %"},
     {"auto_bright",  cmdSetAutoBright,  cmdGetAutoBright,  "on|off LDR-driven brightness"},

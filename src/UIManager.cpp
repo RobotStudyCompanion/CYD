@@ -10,6 +10,7 @@ extern TFT_eSPI tft;
 
 static UIMode _mode = MODE_FACE;
 static uint32_t _lastActivityMs = 0;
+extern void refreshStatsText();
 
 static void enterMenu() {
     _mode = MODE_MENU;
@@ -18,6 +19,7 @@ static void enterMenu() {
     gslc_SetPageCur(&m_gui, MENU_PG_ROOT);
     gslc_PageRedrawSet(&m_gui, true);   // force full redraw on entry
     _lastActivityMs = millis();
+    refreshStatsText();
 }
 
 static void exitMenu() {
@@ -53,6 +55,13 @@ void serviceUI() {
             exitMenu();
             Serial.println("OK: returned to FACE (idle)");
             return;
+        }
+
+        // 1Hz stats refresh while in menu
+        static uint32_t _lastStatsMs = 0;
+        if (millis() - _lastStatsMs >= 1000) {
+            refreshStatsText();
+            _lastStatsMs = millis();
         }
 
         gslc_Update(&m_gui);

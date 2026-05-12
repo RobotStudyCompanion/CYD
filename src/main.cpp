@@ -32,7 +32,7 @@ void setup() {
     gslc_InitDebug(&DebugOut);
     gslc_InitTouchHandler(&m_touch);
     InitGUIslice_gen();
-
+    initMenuIcons();
     initUI();        // _mode = FACE
     setupLed();
     Serial.println("RSC ready");

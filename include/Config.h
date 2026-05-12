@@ -1,6 +1,8 @@
 #pragma once
 #include <Arduino.h>
 
+enum ThemeMode : uint8_t { THEME_DARK = 0, THEME_LIGHT = 1 };
+
 struct Config {
     bool     touchDebug         = false;
     bool     moodAutoCycle      = true;
@@ -15,6 +17,7 @@ struct Config {
     uint8_t  brightDark         = 1;    // target % in dark rooms
     bool     idleAnim           = false;
     uint16_t menuTimeoutSec     = 10;   // auto-return to face; 0 = disabled
+    ThemeMode theme             = THEME_DARK;
     String (*format)();   // optional: short live-value string for menus, e.g. "75%"
 };
 

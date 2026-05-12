@@ -83,7 +83,7 @@ enum {E_BUILTIN10X16,E_BUILTIN15X24,MAX_FONT};
 #define MAX_ELEM_PG_MAIN 10 // # Elems total on page
 #define MAX_ELEM_PG_MAIN_RAM MAX_ELEM_PG_MAIN // # Elems in RAM
 
-#define MAX_ELEM_PG_BURGER_MENU 9 // # Elems total on page
+#define MAX_ELEM_PG_BURGER_MENU 11 // # Elems total on page
 #define MAX_ELEM_PG_BURGER_MENU_RAM MAX_ELEM_PG_BURGER_MENU // # Elems in RAM
 
 #define MAX_ELEM_PG_PWR 9 // # Elems total on page
@@ -205,17 +205,17 @@ void InitGUIslice_gen()
   m_pElemSlider2 = pElemRef;
   
   // Create E_ELEM_IMAGEBTN_VOLUME button with image label
-  pElemRef = gslc_ElemXToggleImgbtnCreate(&m_gui,E_ELEM_IMAGEBTN_VOLUME,E_PG_MAIN,&m_sToggleImg32,(gslc_tsRect){210,190,40,40},
-          gslc_GetImageFromProg((const unsigned char*)volume_loud_icon2_40x40px,GSLC_IMGREF_FMT_RAW1),
-          gslc_GetImageFromProg((const unsigned char*)volume_loud_icon2_40x40px,GSLC_IMGREF_FMT_RAW1),
-          false,&CbBtnCommon);
+  pElemRef = gslc_ElemCreateBtnImg(&m_gui,E_ELEM_IMAGEBTN_VOLUME,E_PG_MAIN,(gslc_tsRect){210,190,40,40},
+        gslc_GetImageFromProg((const unsigned char*)volume_loud_icon2_40x40px,GSLC_IMGREF_FMT_RAW1),
+        gslc_GetImageFromProg((const unsigned char*)volume_loud_icon2_40x40px,GSLC_IMGREF_FMT_RAW1),
+        &CbBtnCommon);
   m_pElemToggleImg32 = pElemRef;
   
   // Create E_ELEM_IMAGEBTN_MIC button with image label
-  pElemRef = gslc_ElemXToggleImgbtnCreate(&m_gui,E_ELEM_IMAGEBTN_MIC,E_PG_MAIN,&m_sToggleImg29,(gslc_tsRect){270,190,40,40},
-          gslc_GetImageFromProg((const unsigned char*)mic_on_icon_40x40px,GSLC_IMGREF_FMT_RAW1),
-          gslc_GetImageFromProg((const unsigned char*)mic_on_icon_40x40px,GSLC_IMGREF_FMT_RAW1),
-          false,&CbBtnCommon);
+  pElemRef = gslc_ElemCreateBtnImg(&m_gui,E_ELEM_IMAGEBTN_MIC,E_PG_MAIN,(gslc_tsRect){270,190,40,40},
+        gslc_GetImageFromProg((const unsigned char*)mic_on_icon_40x40px,GSLC_IMGREF_FMT_RAW1),
+        gslc_GetImageFromProg((const unsigned char*)mic_on_icon_40x40px,GSLC_IMGREF_FMT_RAW1),
+        &CbBtnCommon);
   m_pElemToggleImg29 = pElemRef;
 
   // Create slider E_ELEM_SLIDER3 
@@ -289,7 +289,7 @@ void InitGUIslice_gen()
   
   // Create E_ELEM_TEXT_STATS runtime modifiable text
   static char m_sDisplayText8[121] = "Stats";
-  pElemRef = gslc_ElemCreateTxt(&m_gui,E_ELEM_TEXT_STATS,E_PG_BURGER_MENU,(gslc_tsRect){20,70,240,150},
+  pElemRef = gslc_ElemCreateTxt(&m_gui,E_ELEM_TEXT_STATS,E_PG_BURGER_MENU,(gslc_tsRect){20,70,240,30},
     (char*)m_sDisplayText8,121,E_BUILTIN10X16);
   gslc_ElemSetFrameEn(&m_gui,pElemRef,true);
   gslc_ElemSetTxtCol(&m_gui,pElemRef,GSLC_COL_WHITE);
