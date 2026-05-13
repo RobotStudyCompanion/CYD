@@ -8,6 +8,10 @@
 
 Animated robot face with on-screen touch menus for the [Cheap Yellow Display](https://github.com/witnessmenow/ESP32-Cheap-Yellow-Display) (ESP32-2432S028R), part of the Robot Study Companion (RSC) project. Acts both as a standalone animated companion and as a serial-controlled control surface for a host device (volume / mute / power / reboot). Built on Grobot_Animations, TFT_eSPI, and GUIslice; configured at runtime over UART, persistent across reboots.
 
+<p align="center">
+  <img src=".github/assets/main_menu.png" width="320" alt="Main page — power, RSC logo, brightness + volume sliders with toggle icons, burger menu, back arrow">
+</p>
+
 ---
 
 ## Features
@@ -161,6 +165,9 @@ Sliders are inverted: top = max, bottom = min (matches the 180°-flipped enclosu
 
 ### Burger menu (`E_PG_BURGER_MENU`)
 
+<img src=".github/assets/burger_menu.png" width="320" align="right" alt="Burger menu popup">
+
+
 Settings popup.
 
 | Element | Action |
@@ -172,6 +179,9 @@ Settings popup.
 
 ### Power popup (`E_PG_PWR`)
 
+<img src=".github/assets/pwr_menu.png" width="320" align="right" alt="Burger menu popup">
+
+
 2×2 grid for power actions, split by a horizontal line.
 
 | Row | Left | Right |
@@ -182,6 +192,8 @@ Settings popup.
 Plus a back arrow to dismiss. Destructive actions route through a reusable confirm popup (`E_PG_POPUP_CONFIRM`) with Yes / Cancel; recoverable actions fire immediately.
 
 ### Mode transitions
+
+<img src=".github/assets/confirm_submenu.png" width="320" align="right" alt="Burger menu popup">
 
 | From | To | Trigger |
 |---|---|---|
