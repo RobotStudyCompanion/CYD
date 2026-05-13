@@ -167,7 +167,7 @@ Sliders are inverted: top = max, bottom = min (matches the 180°-flipped enclosu
 
 <table>
 <tr>
-<td width="55%" valign="top">
+<td valign="top">
 
 Settings popup.
 
@@ -179,7 +179,7 @@ Settings popup.
 | Back arrow | Close popup |
 
 </td>
-<td width="45%" valign="top">
+<td valign="top">
 
 <img src=".github/assets/burger_menu.png" width="320" alt="Burger menu popup">
 
@@ -192,7 +192,7 @@ Settings popup.
 
 <table>
 <tr>
-<td width="55%" valign="top">
+<td valign="top">
 
 2×2 grid for power actions, split by a horizontal line.
 
@@ -204,7 +204,7 @@ Settings popup.
 Plus a back arrow to dismiss. Destructive actions route through a reusable confirm popup (`E_PG_POPUP_CONFIRM`) with Yes / Cancel; recoverable actions fire immediately.
 
 </td>
-<td width="45%" valign="top">
+<td valign="top">
 
 <img src=".github/assets/pwr_menu.png" width="320" alt="Power popup — Pi and CYD actions in 2×2 grid"><br>
 <img src=".github/assets/confirm_submenu.png" width="320" alt="Confirm popup for destructive actions">
