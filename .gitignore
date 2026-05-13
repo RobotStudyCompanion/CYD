@@ -5,3 +5,4 @@ include/version.h
 docs
 data
 test
+dist/
