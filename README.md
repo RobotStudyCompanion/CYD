@@ -145,6 +145,19 @@ Adding a new UART command automatically makes it accessible from on-screen widge
 
 Three GUIslice pages plus a confirm popup, navigated entirely by touch.
 
+<table align="center">
+<tr>
+<td align="center"><img src=".github/assets/burger_menu.png" width="240" alt="Burger menu — settings popup"></td>
+<td align="center"><img src=".github/assets/pwr_menu.png" width="240" alt="Power popup — Pi and CYD actions"></td>
+<td align="center"><img src=".github/assets/confirm_submenu.png" width="240" alt="Confirm popup for destructive actions"></td>
+</tr>
+<tr>
+<td align="center"><sub>Burger menu</sub></td>
+<td align="center"><sub>Power popup</sub></td>
+<td align="center"><sub>Confirm popup</sub></td>
+</tr>
+</table>
+
 ### Main page (`E_PG_MAIN`)
 
 Default screen after long-pressing into menu mode.
@@ -165,10 +178,6 @@ Sliders are inverted: top = max, bottom = min (matches the 180°-flipped enclosu
 
 ### Burger menu (`E_PG_BURGER_MENU`)
 
-<table>
-<tr>
-<td valign="top">
-
 Settings popup.
 
 | Element | Action |
@@ -178,21 +187,8 @@ Settings popup.
 | Stats text | Firmware version (tag + commits, `+` suffix if dirty), uptime, free heap — refreshes 1 Hz while open |
 | Back arrow | Close popup |
 
-</td>
-<td valign="top">
-
-<img src=".github/assets/burger_menu.png" width="320" alt="Burger menu popup">
-
-</td>
-</tr>
-</table>
-
 
 ### Power popup (`E_PG_PWR`)
-
-<table>
-<tr>
-<td valign="top">
 
 2×2 grid for power actions, split by a horizontal line.
 
@@ -203,15 +199,6 @@ Settings popup.
 
 Plus a back arrow to dismiss. Destructive actions route through a reusable confirm popup (`E_PG_POPUP_CONFIRM`) with Yes / Cancel; recoverable actions fire immediately.
 
-</td>
-<td valign="top">
-
-<img src=".github/assets/pwr_menu.png" width="320" alt="Power popup — Pi and CYD actions in 2×2 grid"><br>
-<img src=".github/assets/confirm_submenu.png" width="320" alt="Confirm popup for destructive actions">
-
-</td>
-</tr>
-</table>
 
 ### Mode transitions
 
@@ -227,7 +214,7 @@ Idle timeout is suspended while `touch_debug:on` — useful when debugging touch
 
 ---
 
-## UART command grammar
+## UART commands
 
 All commands travel over USB serial at **115200 baud**, newline-terminated.
 
