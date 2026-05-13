@@ -8,6 +8,10 @@
 
 Animated robot face with on-screen touch menus for the [Cheap Yellow Display](https://github.com/witnessmenow/ESP32-Cheap-Yellow-Display) (ESP32-2432S028R), part of the Robot Study Companion (RSC) project. Acts both as a standalone animated companion and as a serial-controlled control surface for a host device (volume / mute / power / reboot). Built on Grobot_Animations, TFT_eSPI, and GUIslice; configured at runtime over UART, persistent across reboots.
 
+<p align="center">
+  <img src=".github/assets/main_menu.png" width="320" alt="Main page — power, RSC logo, brightness + volume sliders with toggle icons, burger menu, back arrow">
+</p>
+
 ---
 
 ## Features
@@ -141,6 +145,19 @@ Adding a new UART command automatically makes it accessible from on-screen widge
 
 Three GUIslice pages plus a confirm popup, navigated entirely by touch.
 
+<table align="center">
+<tr>
+<td align="center"><img src=".github/assets/burger_menu.png" width="240" alt="Burger menu — settings popup"></td>
+<td align="center"><img src=".github/assets/pwr_menu.png" width="240" alt="Power popup — Pi and CYD actions"></td>
+<td align="center"><img src=".github/assets/confirm_submenu.png" width="240" alt="Confirm popup for destructive actions"></td>
+</tr>
+<tr>
+<td align="center"><sub>Burger menu</sub></td>
+<td align="center"><sub>Power popup</sub></td>
+<td align="center"><sub>Confirm popup</sub></td>
+</tr>
+</table>
+
 ### Main page (`E_PG_MAIN`)
 
 Default screen after long-pressing into menu mode.
@@ -170,6 +187,7 @@ Settings popup.
 | Stats text | Firmware version (tag + commits, `+` suffix if dirty), uptime, free heap — refreshes 1 Hz while open |
 | Back arrow | Close popup |
 
+
 ### Power popup (`E_PG_PWR`)
 
 2×2 grid for power actions, split by a horizontal line.
@@ -180,6 +198,7 @@ Settings popup.
 | Front panel (CYD) | Reset (destructive, wipes NVS → confirm) | Reboot (recoverable) |
 
 Plus a back arrow to dismiss. Destructive actions route through a reusable confirm popup (`E_PG_POPUP_CONFIRM`) with Yes / Cancel; recoverable actions fire immediately.
+
 
 ### Mode transitions
 
@@ -195,7 +214,7 @@ Idle timeout is suspended while `touch_debug:on` — useful when debugging touch
 
 ---
 
-## UART command grammar
+## UART commands
 
 All commands travel over USB serial at **115200 baud**, newline-terminated.
 
