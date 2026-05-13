@@ -18,9 +18,19 @@ if [[ "$VERSION" == "unknown" ]]; then
     echo "warn: not in a git repo or no tags found; using 'unknown' as version" >&2
 fi
 
+# Locate pio — prefer PATH, fall back to PlatformIO's penv
+if command -v pio >/dev/null 2>&1; then
+    PIO=pio
+elif [[ -x "$HOME/.platformio/penv/bin/pio" ]]; then
+    PIO="$HOME/.platformio/penv/bin/pio"
+else
+    echo "error: pio not found on PATH or in ~/.platformio/penv/bin" >&2
+    exit 1
+fi
+
 # Build first (no-op if everything up to date)
 echo "==> Building $ENV"
-pio run -e "$ENV"
+"$PIO" run -e "$ENV"
 
 # Sanity check build artifacts
 for f in firmware.bin bootloader.bin partitions.bin; do
