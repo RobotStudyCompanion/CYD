@@ -179,8 +179,7 @@ Settings popup.
 
 ### Power popup (`E_PG_PWR`)
 
-<img src=".github/assets/pwr_menu.png" width="320" align="right" alt="Burger menu popup">
-
+<img src=".github/assets/pwr_menu.png" width="320" align="right" alt="Power popup — Pi and CYD actions in 2×2 grid">
 
 2×2 grid for power actions, split by a horizontal line.
 
@@ -191,9 +190,10 @@ Settings popup.
 
 Plus a back arrow to dismiss. Destructive actions route through a reusable confirm popup (`E_PG_POPUP_CONFIRM`) with Yes / Cancel; recoverable actions fire immediately.
 
-### Mode transitions
+<img src=".github/assets/confirm_submenu.png" width="320" align="right" alt="Confirm popup for destructive actions">
 
-<img src=".github/assets/confirm_submenu.png" width="320" align="right" alt="Burger menu popup">
+
+### Mode transitions
 
 | From | To | Trigger |
 |---|---|---|
